@@ -1,0 +1,19 @@
+# 秘密
+.env
+*.pem
+
+# 後端
+backend/target/
+*.class
+*.log
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+
+# IDE／系統
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

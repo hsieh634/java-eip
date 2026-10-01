@@ -1,0 +1,18 @@
+# 整合測試：連到同一個 PostgreSQL 容器內的獨立資料庫（不會碰開發資料）
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_TEST_NAME:renewflow_test}
+  flyway:
+    # 僅測試允許 clean；實際執行還有 TestFlywayConfig 的資料庫名稱檢查把關
+    clean-disabled: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        # 測試用 HTTP 連線，Secure Cookie 不會被送回
+        secure: false
+
+renewflow:
+  dev-seed:
+    password: ""

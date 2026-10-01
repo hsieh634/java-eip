@@ -1,0 +1,25 @@
+# 本機開發用 PostgreSQL。變數來自同資料夾的 .env（見 .env.example）。
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: renewflow-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-renewflow}
+      POSTGRES_USER: ${DB_USER:-renewflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?請先建立 .env 並設定 DB_PASSWORD}
+      DB_TEST_NAME: ${DB_TEST_NAME:-renewflow_test}
+    ports:
+      # 只綁 127.0.0.1，避免區網其他電腦連到開發資料庫
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - renewflow-pgdata:/var/lib/postgresql/data
+      # 只有「資料卷第一次建立」時才會執行
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  renewflow-pgdata:

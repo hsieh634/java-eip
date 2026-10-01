@@ -1,0 +1,15 @@
+# 本機開發：Vite 以 HTTP 提供畫面，所以 Cookie 不能要求 Secure
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+spring:
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    com.renewflow: debug

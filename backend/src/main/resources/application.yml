@@ -1,0 +1,37 @@
+# 預設設定 = 「正式安全」基準。開發用的放寬項目只放在 application-dev.yml。
+spring:
+  application:
+    name: renewflow-eip
+  config:
+    # 讀專案根目錄的 .env（找不到也不報錯；此時改由真正的環境變數提供）。
+    # 注意：由 backend/ 目錄啟動時，根目錄是上一層。
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:renewflow}
+    # 刻意不給預設值：缺少時啟動失敗，而不是悄悄用弱密碼
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Schema 只由 Flyway 管理；Hibernate 只負責「驗證對得上」，絕不自動改表
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        # 正式環境只經 HTTPS 傳送；dev profile 會改成 false
+        secure: true
+        same-site: lax
+
+renewflow:
+  dev-seed:
+    # 只有 dev profile 的 DevSeedRunner 會讀。留空 = 不建立開發帳號
+    password: ${RENEWFLOW_DEV_SEED_PASSWORD:}

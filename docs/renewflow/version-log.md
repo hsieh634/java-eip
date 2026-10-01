@@ -1,0 +1,38 @@
+# 版本紀錄
+
+## 第 1 輪：T01＋T02
+
+- Repository：`https://github.com/hsieh634/java-eip`，分支 `main`。
+- 審查基準 commit：標題為 `feat: T01-T02 ...` 的 commit，完整 SHA 見交付報告（文件不自我引用 SHA）。
+- 狀態：已驗證（作者自測，見學習文件第 9 節）；**尚未經對話助理審查**。
+
+### 實際版本
+
+| 元件 | 版本 | 來源 |
+|---|---|---|
+| Java（Temurin） | 21.0.12 | `java -version`；`pom.xml` 設 `java.version=21` |
+| Maven（Wrapper） | 3.9.12（Wrapper 3.3.4） | `backend/.mvn/wrapper/maven-wrapper.properties` |
+| Spring Boot | 4.1.1 | `pom.xml` parent |
+| Spring Framework／Security | 7.0.9／7.1.1 | Boot 4.1.1 BOM |
+| Hibernate ORM／Flyway／PostgreSQL JDBC／Tomcat | 7.4.5.Final／12.4.0／42.7.13／11.0.24 | Boot 4.1.1 BOM |
+| PostgreSQL（Docker `postgres:17-alpine`） | 17.11 | 啟動日誌 |
+| Node.js／npm | 24.14.0／11.9.0 | `node -v`、`npm -v` |
+| React／react-dom | 19.3.0 | `frontend/package-lock.json` |
+| TypeScript／Vite／@vitejs/plugin-react | 6.0.3／8.3.1／6.1.1 | `package-lock.json` |
+| oxlint／puppeteer-core | 1.86.0／25.12.0 | `package-lock.json` |
+
+`package.json` 內的範圍（如 `^19.2.8`、`^1.81.0`）只是允許的最低版本；實際安裝版本以 lockfile 為準。
+
+### 官方依據
+
+Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Framework 7.0.9+，2026-10-01 查閱）；Spring Security CSRF 文件（SPA 範式）。
+
+### 已知未解決事項
+
+登入失敗鎖定、改密碼、員工管理、HTTPS／`Secure` Cookie 實測、Session 逾時實測、資料庫中斷的故障注入測試、正式環境同源部署（T06）。
+
+### 本輪對先前口頭報告的更正
+
+1. 先前寫「oxlint 1.81」是 `package.json` 的最低版本範圍，實際安裝為 1.86.0；React 實際為 19.3.0。
+2. 先前寫「瀏覽器腳本不在專案內」；現已整理為 `frontend/e2e/smoke.mjs`（`npm run e2e`），並新增開發相依套件 `puppeteer-core`。
+3. 先前寫「資料夾不是 git repository」；現已初始化並推送。
