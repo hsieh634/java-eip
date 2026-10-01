@@ -310,3 +310,246 @@ h2 {
   border-bottom: 1px solid #f3b9b9;
   color: var(--danger);
 }
+
+/* ---------- T03：品牌、出勤 ---------- */
+a.nav-item {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brand__name {
+  font-weight: 700;
+}
+
+.brand__sub {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.attendance-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1.25rem;
+}
+
+.card--attendance .status {
+  margin: 0 0 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.status--not_started {
+  color: var(--muted);
+}
+
+.status--working {
+  color: #1b7f3b;
+}
+
+.status--completed {
+  color: var(--primary-dark);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.btn--large {
+  min-height: 44px;
+  min-width: 120px;
+  flex: 1;
+}
+
+.notice {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.notice--success {
+  background: #e7f6ec;
+  color: #1b7f3b;
+}
+
+.notice--error {
+  background: #fdecec;
+  color: var(--danger);
+}
+
+.banner--warn {
+  margin: 0.75rem 0;
+  border: 1px solid #f1d28a;
+  border-radius: 8px;
+  background: #fff6dd;
+  color: #7a5a00;
+  font-size: 0.9rem;
+}
+
+.range-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.range-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.range-form input {
+  font: inherit;
+  min-height: 40px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.range-form .btn {
+  min-height: 40px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.records-table th,
+.records-table td {
+  padding: 0.6rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.records-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-chip {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: #eef0f5;
+}
+
+.status-chip--completed {
+  background: #e8eefc;
+  color: var(--primary-dark);
+}
+
+.status-chip--working {
+  background: #e7f6ec;
+  color: #1b7f3b;
+}
+
+.status-chip--incomplete {
+  background: #fff6dd;
+  color: #7a5a00;
+}
+
+@media (max-width: 860px) {
+  .attendance-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.6rem 0.9rem;
+  }
+
+  .brand__sub {
+    display: none;
+  }
+
+  .topbar__user {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .content {
+    padding: 1rem 0.9rem;
+  }
+
+  /* 觸控目標至少 44px（含大型打卡按鈕，因此要寫在 .btn--large 之後的同級規則） */
+  .btn,
+  .btn--large,
+  .nav-item {
+    min-height: 44px;
+  }
+
+  /* 紀錄表在窄螢幕改成卡片式，避免橫向捲動 */
+  .records-table thead {
+    position: absolute;
+    left: -9999px;
+  }
+
+  .records-table,
+  .records-table tbody,
+  .records-table tr,
+  .records-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .records-table tr {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .records-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 0;
+    padding: 0.25rem 0.25rem;
+  }
+
+  .records-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+  }
+
+  .range-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .range-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .range-form input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .range-form .btn {
+    grid-column: 1 / -1;
+  }
+}

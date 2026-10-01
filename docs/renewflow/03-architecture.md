@@ -14,12 +14,16 @@ java-eip/
 │     │  ├─ EmployeeUserDetails, EmployeeUserDetailsService   （與 Spring Security 的橋接）
 │     │  ├─ AuthController, AuthService             （HTTP 邊界／使用案例）
 │     │  ├─ LoginRequest, CurrentUserResponse       （DTO）
-│     │  └─ DevSeedRunner                           （僅 dev profile）
+│     │  ├─ AccountStatusService, AccountState      （共用的最新帳號有效性判斷，T03）
+│     │  └─ DevSeedRunner                           （僅 dev profile；可選「只更新密碼雜湊」）
+│     ├─ attendance/     上下班打卡與本人出勤紀錄                ← T03
+│     │  └─ Attendance, AttendanceRepository, AttendanceService, AttendanceController, *Response
 │     ├─ shared/         跨模組共用
-│     │  ├─ security/    SecurityConfig, CSRF 處理, 401/403 JSON 回應
+│     │  ├─ security/    SecurityConfig, CSRF 處理, 401/403 JSON 回應, ActiveAccountFilter（T03）
+│     │  ├─ time/        TimeConfig（可注入的 Clock）, BusinessTime（Asia/Taipei 業務日期）
 │     │  ├─ validation/  MaxUtf8Bytes（自訂 Bean Validation：UTF-8 位元組上限）
 │     │  └─ web/         ApiError, GlobalExceptionHandler
-│     └─ (attendance, timesheet, leave, project, dashboard 於後續階段建立)
+│     └─ (timesheet, leave, project, dashboard 於後續階段建立)
 ├─ frontend/           React + TypeScript（Vite）
 ├─ docker/             PostgreSQL 初始化腳本
 ├─ docker-compose.yml  本機 PostgreSQL

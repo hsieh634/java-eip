@@ -1,14 +1,18 @@
 import { useAuth } from './auth/useAuth'
+import { AppShell } from './components/AppShell'
+import { useHashView } from './navigation/useHashView'
+import { AttendancePage } from './pages/AttendancePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 
 /**
- * 以登入狀態決定顯示哪個畫面。T02 只有兩個畫面，所以不引入路由套件；
- * 畫面變多（T03 起）再加 react-router。
- * 注意：這只是「畫面」的切換，真正的保護在後端——就算有人強行顯示首頁，沒有 Session 也拿不到任何資料。
+ * 以登入狀態決定顯示哪個畫面；登入後以網址 hash（#/attendance）決定顯示哪一頁。
+ * 目前只有兩頁，所以不引入路由套件；畫面變多再加 react-router。
+ * 注意：這只是「畫面」的切換，真正的保護在後端——就算有人強行顯示頁面，沒有有效 Session 也拿不到任何資料。
  */
 export default function App() {
   const { state, refresh } = useAuth()
+  const view = useHashView()
 
   switch (state.status) {
     case 'loading':
@@ -25,6 +29,10 @@ export default function App() {
     case 'anonymous':
       return <LoginPage />
     case 'authenticated':
-      return <HomePage user={state.user} />
+      return (
+        <AppShell user={state.user} view={view}>
+          {view === 'attendance' ? <AttendancePage /> : <HomePage user={state.user} />}
+        </AppShell>
+      )
   }
 }

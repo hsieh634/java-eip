@@ -204,6 +204,7 @@ try { await logout() } finally { setLoggingOut(false) }
 | README 的補建測試庫指令 | `docker compose exec db psql ... "CREATE DATABASE renewflow_test"` | 回報 `already exists`（符合預期，證明指令能連到並被資料庫執行） |
 
 **未執行／環境限制**
+- （T03 補充：README 的這個做法已被取代——T03 加入出勤外鍵後，刪除帳號重建會被擋下；新的維護流程是 `RENEWFLOW_DEV_SEED_RESET`，只更新密碼雜湊，見 README 第 7 節。）
 - README 中「只刪三個開發帳號」的 `DELETE` 指令**沒有執行**（會改動開發資料）；只執行了相同 `WHERE` 條件的 `SELECT` 確認語法與三筆資料存在。
 - 沒有測試：HTTPS 下 `Secure` Cookie、Session 30 分鐘逾時、Chrome／Firefox、行動版畫面。
 - E2E 需要手動先啟動服務，不在 `mvnw test` 內；測試輸出的 Mockito 自我附加警告來自測試框架，不影響結果。

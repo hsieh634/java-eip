@@ -1,5 +1,6 @@
 package com.renewflow.eip.shared.security;
 
+import com.renewflow.eip.identity.AccountStatusService;
 import com.renewflow.eip.identity.EmployeeUserDetailsService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +15,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -62,6 +64,7 @@ class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             CsrfTokenRepository csrfTokenRepository,
                                             SecurityContextRepository securityContextRepository,
+                                            AccountStatusService accountStatusService,
                                             ObjectMapper objectMapper) {
         JsonSecurityHandlers handlers = new JsonSecurityHandlers(objectMapper, csrfTokenRepository);
 
@@ -73,6 +76,9 @@ class SecurityConfig {
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
 
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
+
+                // 所有受保護請求共用的最新帳號有效性檢查；放在授權之前，無效帳號不會進入任何 Controller
+                .addFilterBefore(new ActiveAccountFilter(accountStatusService, handlers), AuthorizationFilter.class)
 
                 // 原因：預設會把「被擋下的原請求」存進 Session 以便登入後導回；
                 // API 不需要這個功能，且會讓每個匿名 401 都建立一個無用的 Session

@@ -2,6 +2,7 @@ package com.renewflow.eip.identity;
 
 import com.renewflow.eip.support.TestBrowser;
 import com.renewflow.eip.support.TestBrowser.Reply;
+import com.renewflow.eip.support.TestData;
 import com.renewflow.eip.support.TestFlywayConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,7 +45,7 @@ class AuthFlowIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        employeeRepository.deleteAll();
+        TestData.reset(jdbcTemplate); // 先刪出勤再刪員工（外鍵）
         employeeRepository.save(new Employee("T0001", "alice", "愛麗絲", passwordEncoder.encode(PASSWORD), Role.MANAGER));
         browser = new TestBrowser(port);
     }

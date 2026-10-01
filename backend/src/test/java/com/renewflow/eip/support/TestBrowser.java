@@ -43,6 +43,12 @@ public class TestBrowser {
         this.baseUrl = "http://localhost:" + port;
     }
 
+    /** 像使用者一樣登入：先載入頁面取得 CSRF token，再送出登入。 */
+    public Reply login(String username, String password) {
+        get("/api/auth/me");
+        return post("/api/auth/login", "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}");
+    }
+
     public Reply get(String path) {
         return send(HttpRequest.newBuilder(URI.create(baseUrl + path)).GET().build());
     }

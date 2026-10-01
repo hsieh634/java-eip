@@ -46,3 +46,13 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 後端測試 17 → 47；前端 E2E 16 → 16＋23＋10。證據與限制見 `docs/learning/T01-T02-review-fixes.md`。
 - 更正：TypeScript 授權為 Apache-2.0（先前口頭報告誤列為 MIT）；安裝說明改用 `npm ci`；停用員工後 Session 的實際行為是「下一次 `/me` 才作廢」，T03 前需補共用檢查。
 - 狀態：已驗證（作者自測）；**尚未經對話助理審查**。
+
+## 第 3 輪：T03 上下班打卡與本人出勤紀錄（TeamPortal）
+
+- 審查基準（前一輪）：`3bb5299d0e220ed514c76fd9034a9f19020809c6`。
+- T03 commit：標題為 `feat: T03 ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件：**無**（Mockito、Flyway API、Bean Validation 皆來自既有依賴；E2E 沿用 puppeteer-core）。新增 Flyway migration：`V2__create_attendance.sql`（V1 未修改）。
+- 產品名稱：TeamPortal（企業員工入口平台）；Repository、資料夾、Java package、資料庫、容器、環境變數沿用既有名稱。
+- 測試：後端 47 → 94；E2E：dev 環境 18＋23＋10，隔離堆疊 37。
+- 狀態：已驗證（作者自測）；**尚未經對話助理審查**。
+- 規格：`docs/renewflow/t03/`；學習文件：`docs/learning/T03-attendance.md`。

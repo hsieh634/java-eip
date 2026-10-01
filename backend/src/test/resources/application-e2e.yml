@@ -1,0 +1,21 @@
+# 隔離的 E2E 堆疊（只經 spring-boot:test-run 啟動，不屬於正式程式）：
+# 另一個埠、連「測試資料庫」，並為每次執行建立專用員工。絕不使用開發資料庫。
+server:
+  port: ${E2E_API_PORT:8081}
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_TEST_NAME:renewflow_test}
+
+renewflow:
+  test:
+    database: ${DB_TEST_NAME:renewflow_test}
+    dev-database: ${DB_NAME:renewflow}
+  e2e:
+    # 由 E2E 腳本每次產生：識別碼與一次性密碼（不寫在任何檔案）
+    run-id: ${RENEWFLOW_E2E_RUN_ID}
+    password: ${RENEWFLOW_E2E_PASSWORD}

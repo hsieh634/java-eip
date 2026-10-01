@@ -1,5 +1,7 @@
 package com.renewflow.eip.shared.web;
 
+import com.renewflow.eip.attendance.AttendanceRuleException;
+import com.renewflow.eip.attendance.InvalidDateRangeException;
 import com.renewflow.eip.identity.AuthenticationUnavailableException;
 import com.renewflow.eip.identity.InvalidCredentialsException;
 import com.renewflow.eip.identity.UnauthenticatedException;
@@ -14,6 +16,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** 把 Controller 層拋出的例外統一轉成 ApiError。Security Filter 層的 401／403 由 SecurityConfig 另外處理。 */
@@ -31,6 +34,23 @@ public class GlobalExceptionHandler {
                 .reduce((a, b) -> a + ", " + b)
                 .orElse("request");
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "欄位格式不正確：" + fields);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiError> onTypeMismatch(MethodArgumentTypeMismatchException e) {
+        // 例如日期格式不是 YYYY-MM-DD；只回參數名稱，不回傳使用者輸入的值
+        return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "參數格式不正確：" + e.getName());
+    }
+
+    @ExceptionHandler(InvalidDateRangeException.class)
+    ResponseEntity<ApiError> onInvalidDateRange(InvalidDateRangeException e) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", e.getMessage());
+    }
+
+    /** 預期的出勤業務衝突 → 409，code 為規則名稱（ALREADY_CLOCKED_IN 等）。其他例外不會走到這裡。 */
+    @ExceptionHandler(AttendanceRuleException.class)
+    ResponseEntity<ApiError> onAttendanceRule(AttendanceRuleException e) {
+        return build(HttpStatus.CONFLICT, e.getRule().name(), e.getMessage());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

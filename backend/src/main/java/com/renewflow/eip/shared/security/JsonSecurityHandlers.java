@@ -59,6 +59,16 @@ final class JsonSecurityHandlers {
         };
     }
 
+    /** 帳號已失效（停用／刪除／角色變更）→ 401，與一般未登入相同。 */
+    void writeUnauthenticated(HttpServletResponse response) throws IOException {
+        write(response, HttpStatus.UNAUTHORIZED, new ApiError("UNAUTHENTICATED", "請先登入"));
+    }
+
+    /** Filter 層的系統故障 → 500。固定文字，不含任何內部細節。 */
+    void writeInternalError(HttpServletResponse response) throws IOException {
+        write(response, HttpStatus.INTERNAL_SERVER_ERROR, new ApiError("INTERNAL_ERROR", "系統發生錯誤，請稍後再試"));
+    }
+
     private void write(HttpServletResponse response, HttpStatus status, ApiError body) throws IOException {
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

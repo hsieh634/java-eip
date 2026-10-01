@@ -2,6 +2,7 @@ package com.renewflow.eip.identity;
 
 import com.renewflow.eip.support.TestBrowser;
 import com.renewflow.eip.support.TestBrowser.Reply;
+import com.renewflow.eip.support.TestData;
 import com.renewflow.eip.support.TestFlywayConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -34,12 +36,14 @@ class PasswordByteLimitIntegrationTest {
     EmployeeRepository employeeRepository;
     @Autowired
     PasswordEncoder passwordEncoder;
+    @Autowired
+    JdbcTemplate jdbc;
 
     TestBrowser browser;
 
     @BeforeEach
     void setUp() {
-        employeeRepository.deleteAll();
+        TestData.reset(jdbc); // 先刪出勤再刪員工（外鍵）
         employeeRepository.save(new Employee("T0001", "chinese", "中文密碼", passwordEncoder.encode(CHINESE_72_BYTES), Role.EMPLOYEE));
         employeeRepository.save(new Employee("T0002", "ascii", "ASCII 密碼", passwordEncoder.encode(ASCII_72_BYTES), Role.EMPLOYEE));
         browser = new TestBrowser(port);

@@ -55,9 +55,11 @@
 
 - 停用（`enabled=false`）後**不能再登入**。
 - 已登入者的既有 Session **不會被主動中斷**；它會在**下一次 `GET /api/auth/me`** 重新查資料庫時被發現並作廢（回 401 並使 Session 失效）。
-- 目前除 `/me` 外沒有其他受保護的業務 API，所以尚無「逐請求檢查帳號有效性」的機制。
+- （T02 當時）除 `/me` 外沒有其他受保護的業務 API，所以尚無「逐請求檢查帳號有效性」的機制。**T03 起已改為：每個已驗證的請求都會由 `ActiveAccountFilter` 重新確認，停用／刪除／角色變更後的下一個受保護請求即被拒絕並作廢 Session。**
 
-### T03 之前必須處理（本輪不實作，僅記錄）
+### T03 前置事項——**已於 T03 完成**（見 [`t03/04-security-design.md`](t03/04-security-design.md)：`ActiveAccountFilter`）
+
+以下是 T02 當時記錄的需求（保留作為背景）：
 
 T03 起會有**寫入**型 API（打卡等）。若只依賴 Session 內的快照，被停用的員工在 Session 到期前仍可寫入資料。T03 需要一個**所有受保護 API 共用**的帳號有效性檢查（候選做法：Security Filter／`HandlerInterceptor` 依 Session 內的員工 ID 查詢 `enabled`，或由共用的 `CurrentEmployeeService.requireActive()` 在每個 Service 入口呼叫），並為「停用後立即無法寫入」補整合測試。做法在 T03 的 design 再決定，需同時考慮每請求多一次查詢的成本。
 

@@ -72,8 +72,8 @@ export async function trackPageErrors(page) {
   }
 }
 
-export async function loginAs(page, username, password) {
-  await page.goto(BASE, { waitUntil: 'networkidle0' })
+export async function loginAs(page, username, password, base = BASE) {
+  await page.goto(base, { waitUntil: 'networkidle0' })
   await page.waitForSelector('#username')
   await page.type('#username', username)
   await page.type('#password', password)

@@ -104,4 +104,9 @@ public class Employee {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
+
+    /** 只更新密碼雜湊（呼叫端負責先編碼）；員工 ID 與其他資料不變。僅供開發帳號維護流程使用。 */
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }

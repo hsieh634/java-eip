@@ -35,3 +35,5 @@ renewflow:
   dev-seed:
     # 只有 dev profile 的 DevSeedRunner 會讀。留空 = 不建立開發帳號
     password: ${RENEWFLOW_DEV_SEED_PASSWORD:}
+    # true：啟動時只更新三個開發帳號的密碼雜湊（保留員工 ID 與出勤資料）；用完請改回 false
+    reset-passwords: ${RENEWFLOW_DEV_SEED_RESET:false}

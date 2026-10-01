@@ -1,4 +1,4 @@
-# 資料模型（T01）
+# 資料模型（T01；T03 的 `attendance` 表見 [`t03/02-data-model.md`](t03/02-data-model.md)）
 
 Migration：`backend/src/main/resources/db/migration/V1__create_employee.sql`
 

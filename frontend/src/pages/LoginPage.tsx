@@ -34,8 +34,11 @@ export function LoginPage() {
     <main className="login-page">
       <form className="login-card" onSubmit={handleSubmit} noValidate>
         <div className="brand brand--large">
-          <span className="brand__mark" aria-hidden="true">R</span>
-          <span>RenewFlow EIP</span>
+          <span className="brand__mark" aria-hidden="true">T</span>
+          <span className="brand__text">
+            <span className="brand__name">TeamPortal</span>
+            <span className="brand__sub">企業員工入口平台</span>
+          </span>
         </div>
         <h1>登入</h1>
 

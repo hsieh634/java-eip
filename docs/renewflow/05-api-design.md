@@ -1,4 +1,4 @@
-# API 設計（T02）
+# API 設計（T02；T03 出勤 API 見 [`t03/03-api-design.md`](t03/03-api-design.md)）
 
 基底路徑 `/api`；請求與回應皆為 JSON（UTF-8）。
 

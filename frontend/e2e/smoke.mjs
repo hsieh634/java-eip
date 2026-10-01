@@ -25,6 +25,7 @@ try {
   // 1. 未登入 → 登入頁
   await page.goto(BASE, { waitUntil: 'networkidle0' })
   check('未登入看到登入頁', (await text('h1')) === '登入')
+  check('登入頁品牌為 TeamPortal，分頁標題含 TeamPortal', (await text('.brand')).includes('TeamPortal') && (await page.title()).includes('TeamPortal'))
   await page.screenshot({ path: path.join(OUT, '01-login.png') })
 
   // 2. 空欄位時送出鈕停用
@@ -47,8 +48,11 @@ try {
   check('頂欄顯示使用者姓名與角色', (await text('.topbar__name')) === '開發員工' && (await text('.badge')) === '員工')
   check('「我的資訊」顯示員工編號', (await page.$eval('.cards', (el) => el.innerText)).includes('D0003'))
   const pendingTexts = await page.$$eval('.card--pending', (els) => els.map((e) => e.innerText))
-  check('未啟用功能標示「尚未啟用」且無統計數字', pendingTexts.length === 3 && pendingTexts.every((t) => t.includes('尚未啟用') && !/\d+\s*(小時|筆|件)/.test(t)))
-  check('側邊選單的未啟用項目為 disabled', (await page.$$eval('.nav-item:disabled', (els) => els.length)) === 4)
+  check('未啟用功能標示「尚未啟用」且無統計數字', pendingTexts.length === 2 && pendingTexts.every((t) => t.includes('尚未啟用') && !/\d+\s*(小時|筆|件)/.test(t)))
+  check('側邊選單：出勤打卡已啟用，其餘未啟用項目為 disabled', (await page.$$eval('.nav-item:disabled', (els) => els.length)) === 3)
+  // 今日打卡卡片顯示真實資料（只讀取，不打卡）：狀態必為三種之一
+  const attendanceStatus = await page.$eval('[data-testid=today-status]', (el) => el.textContent)
+  check('首頁今日打卡卡片顯示後端狀態', ['尚未上班', '工作中', '今日已完成'].includes(attendanceStatus), attendanceStatus)
   await page.screenshot({ path: path.join(OUT, '03-home.png') })
 
   // 5. Cookie：JSESSIONID 對 JavaScript 不可見（HttpOnly）；XSRF-TOKEN 必須可讀
