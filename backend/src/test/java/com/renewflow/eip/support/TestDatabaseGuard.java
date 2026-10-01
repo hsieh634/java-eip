@@ -61,6 +61,6 @@ public final class TestDatabaseGuard {
     }
 
     private static IllegalStateException refuse(String format, Object... args) {
-        return new IllegalStateException("拒絕對資料庫執行 clean：" + String.format(format, args));
+        return new IllegalStateException("拒絕對資料庫執行 clean 或初始化寫入：" + String.format(format, args));
     }
 }

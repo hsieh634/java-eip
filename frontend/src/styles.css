@@ -553,3 +553,242 @@ a.nav-item {
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- T03.1：申請、更正、管理 ---------- */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.card__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.card__title-row h2,
+.card__title-row h3 {
+  margin: 0;
+}
+
+.btn--small {
+  min-height: 34px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #fdecec;
+  border-color: var(--danger);
+}
+
+.banner--info {
+  margin: 0.75rem 0;
+  border: 1px solid #b9cdf7;
+  border-radius: 8px;
+  background: #eef3ff;
+  color: var(--primary-dark);
+  font-size: 0.9rem;
+}
+
+.banner--info p {
+  margin: 0.25rem 0;
+}
+
+.reason-form,
+.correction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafbff;
+}
+
+.reason-form label,
+.correction-form label,
+.modal label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.reason-form textarea,
+.correction-form textarea,
+.modal textarea,
+.correction-form input,
+.modal input,
+.card select {
+  font: inherit;
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.correction-form h3 {
+  margin: 0 0 0.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.compare dt {
+  color: var(--muted);
+}
+
+.compare dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.request-list,
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.request-item,
+.history-item {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.request-item[data-status='PENDING'] {
+  border-color: #b9cdf7;
+  background: #fafcff;
+}
+
+.request-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.request-item__reason {
+  margin: 0.4rem 0;
+}
+
+.request-item p,
+.history-item p {
+  margin: 0.25rem 0;
+}
+
+.row--voided td {
+  color: var(--muted);
+  background: #f7f7f9;
+}
+
+.row--voided td:not([data-label='狀態']):not([data-label='操作']) {
+  text-decoration: line-through;
+}
+
+.status-chip--voided {
+  background: #eceff4;
+  color: var(--muted);
+}
+
+.status-chip--manual {
+  margin-left: 0.35rem;
+  background: #f0e8fc;
+  color: #5b2ea6;
+}
+
+.status-chip--req-pending {
+  background: #e8eefc;
+  color: var(--primary-dark);
+}
+
+.status-chip--req-approved {
+  background: #e7f6ec;
+  color: #1b7f3b;
+}
+
+.status-chip--req-rejected {
+  background: #fdecec;
+  color: var(--danger);
+}
+
+.status-chip--req-cancelled {
+  background: #eceff4;
+  color: var(--muted);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(28 35 51 / 45%);
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgb(28 35 51 / 30%);
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+@media (max-width: 720px) {
+  .form-grid,
+  .compare {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .form-grid input {
+    width: 100%;
+  }
+
+  .actions .btn {
+    flex: 1 1 140px;
+  }
+
+  .records-table td[data-label='操作'] .actions {
+    justify-content: flex-end;
+  }
+}

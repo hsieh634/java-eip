@@ -95,5 +95,5 @@ export async function startIsolatedStack() {
   }
 
   const user = (letter) => ({ username: `e2e_${letter}_${runId}`, password })
-  return { baseUrl: `http://localhost:${WEB_PORT}`, users: { a: user('a'), b: user('b'), c: user('c') }, stop }
+  return { baseUrl: `http://localhost:${WEB_PORT}`, runId, users: { a: user('a'), b: user('b'), c: user('c'), admin: user('admin') }, stop }
 }

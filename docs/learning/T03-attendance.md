@@ -14,6 +14,8 @@
 | 產品更名 TeamPortal | 已驗證（登入頁、頁籤標題、favicon、README／文件） |
 | 開發帳號「只更新密碼雜湊」維護流程 | 已驗證（只在測試庫；沒有對你的開發帳號執行） |
 
+> **T03.1 之後的變化**：唯一限制改為部分唯一索引（只限「有效」紀錄）、`INSERT ... ON CONFLICT` 的目標加上 `where voided_at is null`、下班 SQL 會維護 `version`，並新增申請／核准／歷程。這些變化的解說在 [T03-1-attendance-corrections.md](T03-1-attendance-corrections.md)；本文件保留 T03 當時的程式與證據。
+
 規格在 `docs/renewflow/t03/`；本文件把它們對應到實際程式。版本：repository `https://github.com/hsieh634/java-eip`、分支 `main`，審查基準是標題為 `feat: T03 ...` 的 commit（完整 SHA 在交付報告）。
 
 ---

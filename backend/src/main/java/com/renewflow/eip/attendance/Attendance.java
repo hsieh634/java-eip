@@ -37,6 +37,23 @@ public class Attendance {
     @Column(name = "clock_out_at")
     private Instant clockOutAt;
 
+    /** 每次修改 +1；申請記住建立當下的版本，核准時比對，過時就拒絕。 */
+    @Column(nullable = false)
+    private long version;
+
+    @Column(name = "voided_at")
+    private Instant voidedAt;
+
+    @Column(name = "voided_by")
+    private Long voidedBy;
+
+    /** CLOCK＝員工打卡；MANUAL＝經核准／直接更正補登建立。 */
+    @Column(nullable = false, length = 10)
+    private String source;
+
+    @Column(name = "corrected_at")
+    private Instant correctedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -65,5 +82,25 @@ public class Attendance {
 
     public Instant getClockOutAt() {
         return clockOutAt;
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public Instant getVoidedAt() {
+        return voidedAt;
+    }
+
+    public boolean isVoided() {
+        return voidedAt != null;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public Instant getCorrectedAt() {
+        return correctedAt;
     }
 }

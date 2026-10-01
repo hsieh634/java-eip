@@ -1,5 +1,7 @@
 # T03 資料模型
 
+> **T03.1（V3）更新**：無條件的 `uq_attendance_employee_work_date` 已改為部分唯一索引 `uq_attendance_active_employee_work_date ... WHERE voided_at IS NULL`；上班 SQL 的衝突目標同步改為 `on conflict (employee_id, work_date) where voided_at is null`；下班 SQL 多了 `voided_at is null` 與 `version = version + 1`。詳見 [`../t03-1/03-data-model.md`](../t03-1/03-data-model.md)。以下保留 T03 當時的設計。
+
 Migration：`backend/src/main/resources/db/migration/V2__create_attendance.sql`（V1 未修改）。
 
 ## attendance

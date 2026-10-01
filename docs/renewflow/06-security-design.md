@@ -63,6 +63,10 @@
 
 T03 起會有**寫入**型 API（打卡等）。若只依賴 Session 內的快照，被停用的員工在 Session 到期前仍可寫入資料。T03 需要一個**所有受保護 API 共用**的帳號有效性檢查（候選做法：Security Filter／`HandlerInterceptor` 依 Session 內的員工 ID 查詢 `enabled`，或由共用的 `CurrentEmployeeService.requireActive()` 在每個 Service 入口呼叫），並為「停用後立即無法寫入」補整合測試。做法在 T03 的 design 再決定，需同時考慮每請求多一次查詢的成本。
 
+## T03.1：管理權限
+
+`/api/admin/**` 需要 `ROLE_ADMIN`（URL 規則＋Service 內再檢查）；`ActiveAccountFilter` 確保角色是最新的；管理員不可審核自己的申請、不可直接更正自己的出勤。詳見 [`t03-1/05-security-design.md`](t03-1/05-security-design.md)。
+
 ## 已知限制
 
 - 無登入失敗鎖定、無密碼政策、無改密碼流程。

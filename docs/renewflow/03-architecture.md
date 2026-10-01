@@ -16,8 +16,11 @@ java-eip/
 │     │  ├─ LoginRequest, CurrentUserResponse       （DTO）
 │     │  ├─ AccountStatusService, AccountState      （共用的最新帳號有效性判斷，T03）
 │     │  └─ DevSeedRunner                           （僅 dev profile；可選「只更新密碼雜湊」）
-│     ├─ attendance/     上下班打卡與本人出勤紀錄                ← T03
-│     │  └─ Attendance, AttendanceRepository, AttendanceService, AttendanceController, *Response
+│     ├─ attendance/     上下班打卡與本人出勤紀錄（T03）；更正／重新打卡申請、管理端、歷程（T03.1）
+│     │  ├─ Attendance, AttendanceRepository, AttendanceService, AttendanceController, *Response
+│     │  ├─ AttendanceRequest*, AttendanceRequestService/Controller（員工申請）
+│     │  ├─ AttendanceAdminService/Controller（/api/admin/**，僅 ADMIN）
+│     │  └─ AttendanceHistory*, AttendanceAuditLog（只新增的歷程）
 │     ├─ shared/         跨模組共用
 │     │  ├─ security/    SecurityConfig, CSRF 處理, 401/403 JSON 回應, ActiveAccountFilter（T03）
 │     │  ├─ time/        TimeConfig（可注入的 Clock）, BusinessTime（Asia/Taipei 業務日期）

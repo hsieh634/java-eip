@@ -1,6 +1,7 @@
 import { useAuth } from './auth/useAuth'
 import { AppShell } from './components/AppShell'
 import { useHashView } from './navigation/useHashView'
+import { AdminAttendancePage } from './pages/AdminAttendancePage'
 import { AttendancePage } from './pages/AttendancePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
@@ -31,7 +32,9 @@ export default function App() {
     case 'authenticated':
       return (
         <AppShell user={state.user} view={view}>
-          {view === 'attendance' ? <AttendancePage /> : <HomePage user={state.user} />}
+          {view === 'attendance' && <AttendancePage />}
+          {view === 'admin-attendance' && <AdminAttendancePage user={state.user} />}
+          {view === 'home' && <HomePage user={state.user} />}
         </AppShell>
       )
   }

@@ -1,7 +1,11 @@
 package com.renewflow.eip.shared.web;
 
+import com.renewflow.eip.attendance.AttendanceConflictException;
+import com.renewflow.eip.attendance.AttendanceForbiddenException;
+import com.renewflow.eip.attendance.AttendanceNotFoundException;
 import com.renewflow.eip.attendance.AttendanceRuleException;
 import com.renewflow.eip.attendance.InvalidDateRangeException;
+import com.renewflow.eip.attendance.InvalidRequestException;
 import com.renewflow.eip.identity.AuthenticationUnavailableException;
 import com.renewflow.eip.identity.InvalidCredentialsException;
 import com.renewflow.eip.identity.UnauthenticatedException;
@@ -45,6 +49,29 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidDateRangeException.class)
     ResponseEntity<ApiError> onInvalidDateRange(InvalidDateRangeException e) {
         return build(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", e.getMessage());
+    }
+
+    /** 輸入格式正確但不符合業務規則（未來時間、下班早於上班…）→ 400 INVALID_REQUEST。 */
+    @ExceptionHandler(InvalidRequestException.class)
+    ResponseEntity<ApiError> onInvalidRequest(InvalidRequestException e) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", e.getMessage());
+    }
+
+    /** 申請／審核的預期衝突（過時、已處理、重複待審…）→ 409，code 由例外指定。 */
+    @ExceptionHandler(AttendanceConflictException.class)
+    ResponseEntity<ApiError> onAttendanceConflict(AttendanceConflictException e) {
+        return build(HttpStatus.CONFLICT, e.getCode(), e.getMessage());
+    }
+
+    /** 已驗證但不被允許（管理員審核自己的申請等）→ 403，與 Security 的 FORBIDDEN 用 code 區分。 */
+    @ExceptionHandler(AttendanceForbiddenException.class)
+    ResponseEntity<ApiError> onAttendanceForbidden(AttendanceForbiddenException e) {
+        return build(HttpStatus.FORBIDDEN, e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(AttendanceNotFoundException.class)
+    ResponseEntity<ApiError> onAttendanceNotFound(AttendanceNotFoundException e) {
+        return build(HttpStatus.NOT_FOUND, e.getCode(), e.getMessage());
     }
 
     /** 預期的出勤業務衝突 → 409，code 為規則名稱（ALREADY_CLOCKED_IN 等）。其他例外不會走到這裡。 */

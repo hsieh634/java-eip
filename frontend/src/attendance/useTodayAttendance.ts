@@ -3,6 +3,8 @@ import * as attendanceApi from '../api/attendance'
 import type { TodayAttendance } from '../api/attendance'
 import { ApiError } from '../api/http'
 import { useAuth } from '../auth/useAuth'
+import { taipeiToday } from '../lib/time'
+import { useAutoRefresh } from './useAutoRefresh'
 
 export type TodayState =
   | { kind: 'loading' }
@@ -65,6 +67,18 @@ export function useTodayAttendance(onChanged?: () => void) {
     }
   }, [settleLoadError])
 
+  // 視窗回到前景、切回分頁時重新查詢；另外每 10 秒檢查「台北的今天」是否已經換日，換日就重新查詢，
+  // 避免隔天仍停留在昨天的「已完成」。
+  useAutoRefresh(() => void reload())
+  const shownDate = state.kind === 'ready' ? state.data.workDate : null
+  useEffect(() => {
+    if (!shownDate) return
+    const timer = setInterval(() => {
+      if (taipeiToday() !== shownDate) void reload()
+    }, 10_000)
+    return () => clearInterval(timer)
+  }, [shownDate, reload])
+
   const retry = useCallback(() => {
     setState({ kind: 'loading' })
     void reload()
@@ -110,6 +124,7 @@ export function useTodayAttendance(onChanged?: () => void) {
     busy,
     notice,
     retry,
+    reload,
     clockIn: () => perform('in'),
     clockOut: () => perform('out'),
   }

@@ -1,13 +1,22 @@
 import { api } from './http'
 
-export type AttendanceStatus = 'NOT_STARTED' | 'WORKING' | 'COMPLETED' | 'INCOMPLETE'
+export type AttendanceStatus = 'NOT_STARTED' | 'WORKING' | 'COMPLETED' | 'INCOMPLETE' | 'VOIDED'
 
 /** 對應後端 AttendanceRecordResponse。時間是 ISO 8601（UTC）。 */
 export interface AttendanceRecord {
+  /** 同一個日期可能有多筆（已作廢的舊紀錄＋有效紀錄），所以列表的 key 要用 id，不能只用日期。 */
+  id: number
   workDate: string
   clockInAt: string
   clockOutAt: string | null
   status: AttendanceStatus
+  /** CLOCK＝員工打卡；MANUAL＝補登 */
+  source: 'CLOCK' | 'MANUAL'
+  /** 時間是否被更正過 */
+  corrected: boolean
+  voidedAt: string | null
+  /** 管理員直接更正時用來偵測「資料已被改過」 */
+  version: number
 }
 
 /** 對應後端 TodayAttendanceResponse；沒有紀錄時 status 是 NOT_STARTED（不是錯誤）。 */

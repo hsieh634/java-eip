@@ -90,6 +90,8 @@ class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
+                        // 管理 API：只有 ADMIN（後端驗證；前端隱藏入口不是安全機制）。角色由 ActiveAccountFilter 確認為最新
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         // 沒有明確開放的一律拒絕（預設拒絕比預設允許安全）
                         .anyRequest().denyAll())

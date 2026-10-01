@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -17,9 +16,6 @@ import java.util.List;
  */
 @Service
 public class AttendanceService {
-
-    /** 日期範圍上限：含起訖日 31 個日曆日。 */
-    static final int MAX_RANGE_DAYS = 31;
 
     private final AttendanceRepository attendanceRepository;
     private final Clock clock;
@@ -38,7 +34,7 @@ public class AttendanceService {
         int inserted = attendanceRepository.insertIfAbsent(employeeId, today, now);
         if (inserted == 0) {
             // 衝突不會讓交易失效，所以可以在同一個交易內查詢原因，給出精準的訊息
-            boolean alreadyCompleted = attendanceRepository.findByEmployeeIdAndWorkDate(employeeId, today)
+            boolean alreadyCompleted = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
                     .map(a -> a.getClockOutAt() != null)
                     .orElse(false);
             throw new AttendanceRuleException(Rule.ALREADY_CLOCKED_IN,
@@ -55,7 +51,7 @@ public class AttendanceService {
 
         int updated = attendanceRepository.clockOutIfOpen(employeeId, today, now);
         if (updated == 0) {
-            Attendance current = attendanceRepository.findByEmployeeIdAndWorkDate(employeeId, today).orElse(null);
+            Attendance current = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today).orElse(null);
             if (current == null) {
                 throw new AttendanceRuleException(Rule.CLOCK_IN_REQUIRED, "今日尚未上班打卡，無法下班打卡");
             }
@@ -72,11 +68,11 @@ public class AttendanceService {
     public TodayAttendanceResponse today(Long employeeId) {
         LocalDate today = BusinessTime.workDateOf(now());
         LocalDate unfinishedBefore = attendanceRepository
-                .findFirstByEmployeeIdAndWorkDateBeforeAndClockOutAtIsNullOrderByWorkDateDesc(employeeId, today)
+                .findFirstByEmployeeIdAndWorkDateBeforeAndClockOutAtIsNullAndVoidedAtIsNullOrderByWorkDateDesc(employeeId, today)
                 .map(Attendance::getWorkDate)
                 .orElse(null);
 
-        return attendanceRepository.findByEmployeeIdAndWorkDate(employeeId, today)
+        return attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
                 .map(a -> {
                     AttendanceRecordResponse record = AttendanceRecordResponse.from(a, today);
                     return new TodayAttendanceResponse(record.status(), today, BusinessTime.ZONE.getId(),
@@ -94,28 +90,13 @@ public class AttendanceService {
     @Transactional(readOnly = true)
     public AttendanceListResponse list(Long employeeId, LocalDate from, LocalDate to) {
         LocalDate today = BusinessTime.workDateOf(now());
-        if ((from == null) != (to == null)) {
-            throw new InvalidDateRangeException("請同時提供起日與迄日，或兩者都不提供（預設為本月）");
-        }
-        LocalDate rangeFrom = from;
-        LocalDate rangeTo = to;
-        if (rangeFrom == null) {
-            rangeFrom = today.withDayOfMonth(1);
-            rangeTo = today.withDayOfMonth(today.lengthOfMonth());
-        }
-        if (rangeFrom.isAfter(rangeTo)) {
-            throw new InvalidDateRangeException("起日不可晚於迄日");
-        }
-        long daysInclusive = ChronoUnit.DAYS.between(rangeFrom, rangeTo) + 1;
-        if (daysInclusive > MAX_RANGE_DAYS) {
-            throw new InvalidDateRangeException("日期範圍最多 " + MAX_RANGE_DAYS + " 天（含起訖日）");
-        }
+        DateRange range = DateRange.resolve(from, to, today);
 
         List<AttendanceRecordResponse> records = attendanceRepository
-                .findByEmployeeIdAndWorkDateBetweenOrderByWorkDateDesc(employeeId, rangeFrom, rangeTo).stream()
+                .findByEmployeeIdAndWorkDateBetweenOrderByWorkDateDescIdDesc(employeeId, range.from(), range.to()).stream()
                 .map(a -> AttendanceRecordResponse.from(a, today))
                 .toList();
-        return new AttendanceListResponse(rangeFrom, rangeTo, BusinessTime.ZONE.getId(), records);
+        return new AttendanceListResponse(range.from(), range.to(), BusinessTime.ZONE.getId(), records);
     }
 
     private Instant now() {
@@ -123,7 +104,7 @@ public class AttendanceService {
     }
 
     private AttendanceRecordResponse recordOf(Long employeeId, LocalDate workDate, LocalDate today) {
-        Attendance attendance = attendanceRepository.findByEmployeeIdAndWorkDate(employeeId, workDate)
+        Attendance attendance = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, workDate)
                 .orElseThrow(() -> new IllegalStateException("attendance row missing right after a successful write"));
         return AttendanceRecordResponse.from(attendance, today);
     }

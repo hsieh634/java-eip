@@ -11,49 +11,91 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 所有方法都以 employee_id 限定範圍：沒有任何「只憑 ID 讀別人紀錄」的方法。
+ * 所有方法都以 employee_id 限定範圍，且「今日／下班／提醒」一律只看有效（未作廢）的紀錄。
+ * 寫入全部是原生的條件式 SQL，每次修改都同步 version = version + 1。
  */
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     /**
-     * 上班：原子地「不存在才新增」。回傳 1＝新增成功；0＝（員工,日期）已有紀錄。
+     * 上班：原子地「沒有『有效』紀錄才新增」。回傳 1＝新增成功；0＝今日已有有效紀錄。
+     *
+     * <p>衝突目標 <code>(employee_id, work_date) where voided_at is null</code> 必須與部分唯一索引
+     * uq_attendance_active_employee_work_date 的定義完全相同，PostgreSQL 才找得到要裁決的索引；
+     * 作廢的舊紀錄不在索引內，所以重新打卡可以新增。
      *
      * <p>為什麼不是「先查有沒有，再 save」：兩個同時的請求可能都查到「沒有」。
-     * 為什麼不是捕捉唯一限制例外：PostgreSQL 在約束錯誤後會把整個交易標為失敗，之後不能再查詢；
-     * ON CONFLICT DO NOTHING 不產生錯誤，交易仍然健康，而且只處理這一個預期的衝突
-     * （外鍵等其他完整性錯誤仍然會丟出例外，不會被誤判成「重複打卡」）。
+     * 為什麼不是捕捉唯一限制例外：PostgreSQL 在約束錯誤後會把整個交易標為失敗，之後不能再查詢。
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             insert into attendance (employee_id, work_date, clock_in_at, created_at, updated_at)
             values (:employeeId, :workDate, :now, :now, :now)
-            on conflict (employee_id, work_date) do nothing
+            on conflict (employee_id, work_date) where voided_at is null do nothing
             """, nativeQuery = true)
     int insertIfAbsent(@Param("employeeId") Long employeeId,
                        @Param("workDate") LocalDate workDate,
                        @Param("now") Instant now);
 
     /**
-     * 下班：只在「已上班且尚未下班」時填入時間。回傳 1＝成功；0＝沒有符合的紀錄。
-     * 條件在同一個 UPDATE 內判斷：兩個同時下班時，第二個會等第一個提交，再以最新資料重新檢查
-     * clock_out_at is null，結果更新 0 筆，不會覆蓋第一次的下班時間。
+     * 下班：只在「有效、已上班且尚未下班」時填入時間。回傳 1＝成功；0＝沒有符合的紀錄。
+     * 條件在同一個 UPDATE 內判斷，並行時第二個會等第一個提交再以最新資料重新檢查而更新 0 筆；
+     * 同時 version + 1，讓依舊版本提出的申請在核准時被判定為過時。
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
-            update attendance set clock_out_at = :now, updated_at = :now
+            update attendance set clock_out_at = :now, updated_at = :now, version = version + 1
              where employee_id = :employeeId and work_date = :workDate
-               and clock_out_at is null and clock_in_at <= :now
+               and voided_at is null and clock_out_at is null and clock_in_at <= :now
             """, nativeQuery = true)
     int clockOutIfOpen(@Param("employeeId") Long employeeId,
                        @Param("workDate") LocalDate workDate,
                        @Param("now") Instant now);
 
-    Optional<Attendance> findByEmployeeIdAndWorkDate(Long employeeId, LocalDate workDate);
+    /** 作廢（重新打卡）：只在「版本相符且仍有效」時成功；原時間保留。回傳 0＝資料已被改過。 */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            update attendance set voided_at = :now, voided_by = :voidedBy, updated_at = :now, version = version + 1
+             where id = :id and version = :version and voided_at is null
+            """, nativeQuery = true)
+    int voidIfCurrent(@Param("id") Long id,
+                      @Param("version") long version,
+                      @Param("voidedBy") Long voidedBy,
+                      @Param("now") Instant now);
 
-    /** 今日之前最近一筆「有上班、沒下班」的紀錄（用來提醒使用者）。 */
-    Optional<Attendance> findFirstByEmployeeIdAndWorkDateBeforeAndClockOutAtIsNullOrderByWorkDateDesc(
+    /** 更正時間：只在「版本相符且仍有效」時成功。回傳 0＝資料已被改過（不覆蓋較新的資料）。 */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            update attendance set clock_in_at = :clockIn, clock_out_at = :clockOut,
+                   corrected_at = :now, updated_at = :now, version = version + 1
+             where id = :id and version = :version and voided_at is null
+            """, nativeQuery = true)
+    int correctIfCurrent(@Param("id") Long id,
+                         @Param("version") long version,
+                         @Param("clockIn") Instant clockIn,
+                         @Param("clockOut") Instant clockOut,
+                         @Param("now") Instant now);
+
+    /** 補登：該日沒有有效紀錄時才建立（source = MANUAL）。回傳 0＝該日已有有效紀錄。 */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            insert into attendance (employee_id, work_date, clock_in_at, clock_out_at, source, corrected_at, created_at, updated_at)
+            values (:employeeId, :workDate, :clockIn, :clockOut, 'MANUAL', :now, :now, :now)
+            on conflict (employee_id, work_date) where voided_at is null do nothing
+            """, nativeQuery = true)
+    int insertManualIfAbsent(@Param("employeeId") Long employeeId,
+                             @Param("workDate") LocalDate workDate,
+                             @Param("clockIn") Instant clockIn,
+                             @Param("clockOut") Instant clockOut,
+                             @Param("now") Instant now);
+
+    /** 該日的有效紀錄（最多一筆，由部分唯一索引保證）。 */
+    Optional<Attendance> findByEmployeeIdAndWorkDateAndVoidedAtIsNull(Long employeeId, LocalDate workDate);
+
+    /** 今日之前最近一筆「有效、有上班、沒下班」的紀錄（用來提醒使用者）；作廢紀錄不計。 */
+    Optional<Attendance> findFirstByEmployeeIdAndWorkDateBeforeAndClockOutAtIsNullAndVoidedAtIsNullOrderByWorkDateDesc(
             Long employeeId, LocalDate before);
 
-    List<Attendance> findByEmployeeIdAndWorkDateBetweenOrderByWorkDateDesc(
+    /** 區間內的紀錄（含已作廢），日期新到舊；同日期以 id 新到舊（有效的在前面）。 */
+    List<Attendance> findByEmployeeIdAndWorkDateBetweenOrderByWorkDateDescIdDesc(
             Long employeeId, LocalDate from, LocalDate to);
 }

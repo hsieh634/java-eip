@@ -12,6 +12,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
+import org.springframework.context.ApplicationContext;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +39,8 @@ class DevSeedRunnerTest {
     PasswordEncoder passwordEncoder;
     @Autowired
     JdbcTemplate jdbc;
+    @Autowired
+    ApplicationContext context;
 
     Long adminId;
 
@@ -49,7 +55,11 @@ class DevSeedRunnerTest {
     }
 
     private DevSeedRunner runner(String password, boolean reset) {
-        return new DevSeedRunner(employeeRepository, passwordEncoder, password, reset);
+        return new DevSeedRunner(employeeRepository, passwordEncoder, password, "", reset);
+    }
+
+    private DevSeedRunner runner(String shared, String developer, boolean reset) {
+        return new DevSeedRunner(employeeRepository, passwordEncoder, shared, developer, reset);
     }
 
     @Test
@@ -65,7 +75,7 @@ class DevSeedRunnerTest {
         assertThat(passwordEncoder.matches(OLD_PASSWORD, admin.getPasswordHash())).isFalse();
         assertThat(jdbc.queryForObject("select count(*) from attendance where employee_id = ?", Integer.class, adminId))
                 .as("出勤資料保留").isEqualTo(1);
-        // 另外兩個開發帳號原本不存在，會被建立；總數 3，admin 沒有被重複建立
+        // 另外兩個一般開發帳號原本不存在，會被建立；developer 沒設定獨立密碼所以不建立；總數 3，admin 沒有被重複建立
         assertThat(employeeRepository.count()).isEqualTo(3);
     }
 
@@ -98,5 +108,68 @@ class DevSeedRunnerTest {
 
         Employee someone = employeeRepository.findByUsername("someone").orElseThrow();
         assertThat(passwordEncoder.matches(OLD_PASSWORD, someone.getPasswordHash())).isTrue();
+    }
+
+    // ---------------- developer（ADMIN）帳號 ----------------
+
+    private static final String DEVELOPER_PASSWORD = "developer-only-Passw0rd";
+
+    @Test
+    @DisplayName("C-25 developer：設定獨立密碼時建立，角色為 ADMIN；密碼只能用 developer 自己的，不能用一般員工的共用密碼")
+    void developerIsCreatedWithOwnPassword() {
+        runner(NEW_PASSWORD, DEVELOPER_PASSWORD, false).run(null);
+
+        Employee developer = employeeRepository.findByUsername("developer").orElseThrow();
+        assertThat(developer.getRole()).isEqualTo(Role.ADMIN);
+        assertThat(passwordEncoder.matches(DEVELOPER_PASSWORD, developer.getPasswordHash())).isTrue();
+        assertThat(passwordEncoder.matches(NEW_PASSWORD, developer.getPasswordHash())).as("不沿用共用密碼").isFalse();
+        // 一般帳號仍用共用密碼；既有 admin 同樣是 ADMIN，manager 不是
+        assertThat(employeeRepository.findByUsername("manager").orElseThrow().getRole()).isEqualTo(Role.MANAGER);
+        assertThat(passwordEncoder.matches(NEW_PASSWORD, employeeRepository.findByUsername("employee").orElseThrow().getPasswordHash())).isTrue();
+        assertThat(passwordEncoder.matches(DEVELOPER_PASSWORD, employeeRepository.findByUsername("employee").orElseThrow().getPasswordHash())).isFalse();
+    }
+
+    @Test
+    @DisplayName("C-25 developer：沒有設定密碼 → 不建立（沒有任何預設密碼），其他開發帳號照常建立")
+    void developerIsNotCreatedWithoutPassword() {
+        runner(NEW_PASSWORD, "", false).run(null);
+
+        assertThat(employeeRepository.findByUsername("developer")).isEmpty();
+        assertThat(employeeRepository.findByUsername("employee")).isPresent();
+        runner(NEW_PASSWORD, "   ", false).run(null);
+        assertThat(employeeRepository.findByUsername("developer")).as("空白也不算設定").isEmpty();
+    }
+
+    @Test
+    @DisplayName("C-25 developer：RENEWFLOW_DEV_SEED_RESET 只更新其密碼雜湊（ID 不變）；沒設定密碼時不更動")
+    void developerPasswordResetKeepsId() {
+        runner(NEW_PASSWORD, DEVELOPER_PASSWORD, false).run(null);
+        Long id = employeeRepository.findByUsername("developer").orElseThrow().getId();
+
+        runner(NEW_PASSWORD, "", true).run(null);
+        assertThat(passwordEncoder.matches(DEVELOPER_PASSWORD, employeeRepository.findByUsername("developer").orElseThrow().getPasswordHash()))
+                .as("沒有提供 developer 密碼 → 不更動").isTrue();
+
+        runner(NEW_PASSWORD, "another-developer-Passw0rd", true).run(null);
+        Employee developer = employeeRepository.findByUsername("developer").orElseThrow();
+        assertThat(developer.getId()).isEqualTo(id);
+        assertThat(passwordEncoder.matches("another-developer-Passw0rd", developer.getPasswordHash())).isTrue();
+        assertThat(passwordEncoder.matches(DEVELOPER_PASSWORD, developer.getPasswordHash())).isFalse();
+    }
+
+    @Test
+    @DisplayName("C-25 developer 只在 dev profile 初始化：非 dev（這裡是 test）的應用程式內根本沒有 DevSeedRunner")
+    void devSeedRunnerExistsOnlyInDevProfile() {
+        assertThat(context.getBeanNamesForType(DevSeedRunner.class)).isEmpty();
+        assertThat(employeeRepository.findByUsername("developer")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("C-25 沒有寫死的預設密碼：.env.example 的 developer 密碼是空白占位；設定檔對應變數的預設值是空字串")
+    void noHardcodedDeveloperPassword() throws Exception {
+        String example = Files.readString(Path.of("../.env.example"));
+        assertThat(example).containsPattern("(?m)^RENEWFLOW_DEV_DEVELOPER_PASSWORD=\s*$");
+        String yaml = Files.readString(Path.of("src/main/resources/application.yml"));
+        assertThat(yaml).contains("developer-password: ${RENEWFLOW_DEV_DEVELOPER_PASSWORD:}");
     }
 }

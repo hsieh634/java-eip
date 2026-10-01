@@ -1,0 +1,119 @@
+package com.renewflow.eip.attendance;
+
+import com.renewflow.eip.attendance.AttendanceDtos.AttendanceRequestResponse;
+import com.renewflow.eip.attendance.AttendanceDtos.CreateRequest;
+import com.renewflow.eip.attendance.AttendanceDtos.HistoryEntryResponse;
+import com.renewflow.eip.shared.time.BusinessTime;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * 員工端：提出、撤回、查看自己的申請與歷程。員工 ID 一律由呼叫端（Session）傳入。
+ * 申請只是「希望值」——核准前不會改動任何正式出勤資料。
+ */
+@Service
+public class AttendanceRequestService {
+
+    private final AttendanceRepository attendanceRepository;
+    private final AttendanceRequestRepository requestRepository;
+    private final AttendanceHistoryRepository historyRepository;
+    private final AttendanceAuditLog auditLog;
+    private final AttendanceViews views;
+    private final Clock clock;
+
+    AttendanceRequestService(AttendanceRepository attendanceRepository,
+                             AttendanceRequestRepository requestRepository,
+                             AttendanceHistoryRepository historyRepository,
+                             AttendanceAuditLog auditLog,
+                             AttendanceViews views,
+                             Clock clock) {
+        this.attendanceRepository = attendanceRepository;
+        this.requestRepository = requestRepository;
+        this.historyRepository = historyRepository;
+        this.auditLog = auditLog;
+        this.views = views;
+        this.clock = clock;
+    }
+
+    @Transactional
+    public AttendanceRequestResponse submit(Long employeeId, CreateRequest body) {
+        Instant now = BusinessTime.truncateToDatabasePrecision(clock.instant());
+        LocalDate today = BusinessTime.workDateOf(now);
+        String reason = body.reason().trim();
+        if (reason.isEmpty()) {
+            throw new InvalidRequestException("請填寫原因");
+        }
+
+        LocalDate workDate;
+        Attendance target;
+        Instant requestedIn = null;
+        Instant requestedOut = null;
+        if (body.type() == AttendanceRequestType.RESET_TODAY) {
+            workDate = today; // 重新打卡只針對「今日」，日期由伺服器決定
+            target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
+                    .orElseThrow(() -> new AttendanceConflictException("NO_RECORD_TO_RESET", "今日沒有出勤紀錄，不需要申請重新打卡"));
+        } else {
+            if (body.workDate() == null || body.clockInTime() == null) {
+                throw new InvalidRequestException("更正申請必須提供日期與上班時間");
+            }
+            workDate = body.workDate();
+            requestedIn = AttendanceTimes.toInstant(workDate, body.clockInTime());
+            requestedOut = AttendanceTimes.toInstant(workDate, body.clockOutTime());
+            AttendanceTimes.validate(workDate, requestedIn, requestedOut, now, today);
+            target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, workDate).orElse(null);
+            if (target != null && Objects.equals(target.getClockInAt(), requestedIn)
+                    && Objects.equals(target.getClockOutAt(), requestedOut)) {
+                throw new InvalidRequestException("申請的時間與目前的紀錄相同，沒有需要更正的內容");
+            }
+        }
+
+        Instant originalIn = target == null ? null : target.getClockInAt();
+        Instant originalOut = target == null ? null : target.getClockOutAt();
+        Long id = requestRepository.insertPending(employeeId, body.type().name(), workDate,
+                        target == null ? null : target.getId(), target == null ? null : target.getVersion(),
+                        originalIn, originalOut, requestedIn, requestedOut, reason, now)
+                .orElseThrow(() -> new AttendanceConflictException("DUPLICATE_PENDING_REQUEST",
+                        "這個日期已有待審申請，請先撤回或等待審核"));
+
+        auditLog.record(new AuditEntry(AttendanceOperation.REQUEST_SUBMITTED, employeeId, workDate, id, body.type(),
+                target == null ? null : target.getId(), target == null ? null : target.getVersion(), reason,
+                originalIn, originalOut, requestedIn, requestedOut, null, null, null, null, employeeId, now));
+        return views.request(requestRepository.findById(id).orElseThrow(), today);
+    }
+
+    /** 撤回自己的待審申請。別人的申請一律回 404（不洩漏是否存在）。 */
+    @Transactional
+    public AttendanceRequestResponse cancel(Long employeeId, Long requestId) {
+        Instant now = BusinessTime.truncateToDatabasePrecision(clock.instant());
+        int updated = requestRepository.cancel(requestId, employeeId, now);
+        if (updated == 0) {
+            if (requestRepository.findByIdAndEmployeeId(requestId, employeeId).isEmpty()) {
+                throw new AttendanceNotFoundException("REQUEST_NOT_FOUND", "找不到這筆申請");
+            }
+            throw new AttendanceConflictException("REQUEST_NOT_PENDING", "這筆申請已不是待審狀態，無法撤回");
+        }
+        AttendanceRequest request = requestRepository.findByIdAndEmployeeId(requestId, employeeId).orElseThrow();
+        auditLog.record(new AuditEntry(AttendanceOperation.REQUEST_CANCELLED, employeeId, request.getWorkDate(), requestId,
+                request.getType(), request.getTargetAttendanceId(), request.getTargetVersion(), request.getReason(),
+                request.getOriginalClockInAt(), request.getOriginalClockOutAt(),
+                request.getRequestedClockInAt(), request.getRequestedClockOutAt(), null, null, null, null, employeeId, now));
+        return views.request(request, BusinessTime.workDateOf(now));
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceRequestResponse> listMine(Long employeeId) {
+        LocalDate today = BusinessTime.workDateOf(clock.instant());
+        return views.requests(requestRepository.findTop50ByEmployeeIdOrderByIdDesc(employeeId), today);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HistoryEntryResponse> historyOf(Long employeeId) {
+        return views.history(historyRepository.findTop200ByEmployeeIdOrderByIdDesc(employeeId));
+    }
+}

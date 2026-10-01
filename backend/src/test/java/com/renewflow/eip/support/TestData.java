@@ -8,9 +8,12 @@ public final class TestData {
     private TestData() {
     }
 
-    /** 先刪出勤再刪員工：出勤對員工有外鍵（ON DELETE RESTRICT）。 */
+    /**
+     * 清空測試庫的員工與出勤相關資料。
+     * 用 TRUNCATE 而不是 DELETE：歷程表有觸發器禁止 DELETE／UPDATE（歷程只能新增）；
+     * TRUNCATE 需要把所有互相有外鍵的表列在同一個指令內。
+     */
     public static void reset(JdbcTemplate jdbc) {
-        jdbc.update("delete from attendance");
-        jdbc.update("delete from employee");
+        jdbc.execute("truncate table attendance_history, attendance_request, attendance, employee");
     }
 }

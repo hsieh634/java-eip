@@ -92,6 +92,17 @@ export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser;
                 出勤打卡
               </a>
             </li>
+            {user.role === 'ADMIN' && (
+              <li>
+                <a
+                  href="#/admin/attendance"
+                  className={view === 'admin-attendance' ? 'nav-item nav-item--active' : 'nav-item'}
+                  aria-current={view === 'admin-attendance' ? 'page' : undefined}
+                >
+                  出勤管理
+                </a>
+              </li>
+            )}
             {PENDING_FEATURES.map((f) => (
               <li key={f.key}>
                 <button type="button" className="nav-item" disabled>

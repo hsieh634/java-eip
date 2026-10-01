@@ -51,6 +51,7 @@ try {
   check('未啟用功能標示「尚未啟用」且無統計數字', pendingTexts.length === 2 && pendingTexts.every((t) => t.includes('尚未啟用') && !/\d+\s*(小時|筆|件)/.test(t)))
   check('側邊選單：出勤打卡已啟用，其餘未啟用項目為 disabled', (await page.$$eval('.nav-item:disabled', (els) => els.length)) === 3)
   // 今日打卡卡片顯示真實資料（只讀取，不打卡）：狀態必為三種之一
+  await page.waitForSelector('[data-testid=today-status]') // 卡片資料是非同步載入的
   const attendanceStatus = await page.$eval('[data-testid=today-status]', (el) => el.textContent)
   check('首頁今日打卡卡片顯示後端狀態', ['尚未上班', '工作中', '今日已完成'].includes(attendanceStatus), attendanceStatus)
   await page.screenshot({ path: path.join(OUT, '03-home.png') })

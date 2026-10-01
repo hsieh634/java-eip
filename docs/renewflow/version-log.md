@@ -56,3 +56,14 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 測試：後端 47 → 94；E2E：dev 環境 18＋23＋10，隔離堆疊 37。
 - 狀態：已驗證（作者自測）；**尚未經對話助理審查**。
 - 規格：`docs/renewflow/t03/`；學習文件：`docs/learning/T03-attendance.md`。
+
+## 第 4 輪：T03.1 出勤更正、重新打卡申請與管理權限
+
+- 審查基準（前一輪）：`3616464b38715e4a72a0c1813479892678a13361`。
+- T03.1 commit：標題為 `feat: T03.1 ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件：**無**。新增 Flyway migration：`V3__attendance_corrections.sql`（V1、V2 未修改）。
+- 新增本機開發帳號 `developer`（ADMIN，僅 dev profile；密碼 `RENEWFLOW_DEV_DEVELOPER_PASSWORD`，無預設值）。
+- 補強 T03：E2E 隔離堆疊的資料庫檢查提前到 migration 之前（`E2eFlywayConfig`）。
+- 測試：後端 94 → 151；E2E：dev 環境 18＋23＋10，隔離堆疊 37＋52。
+- 狀態：已驗證（作者自測）；**尚未經對話助理審查**。
+- 規格：`docs/renewflow/t03-1/`；學習文件：`docs/learning/T03-1-attendance-corrections.md`。

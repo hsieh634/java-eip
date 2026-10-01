@@ -7,11 +7,13 @@ package com.renewflow.eip.attendance;
  *   <li>WORKING：今日已上班、尚未下班</li>
  *   <li>COMPLETED：已有上班與下班時間</li>
  *   <li>INCOMPLETE：過去日期有上班、沒有下班（只出現在歷史列表；保留原樣，不自動補下班）</li>
+ * <li>VOIDED：已作廢（重新打卡時被取代）；保留原時間，只出現在歷史列表</li>
  * </ul>
  */
 public enum AttendanceStatus {
     NOT_STARTED,
     WORKING,
     COMPLETED,
-    INCOMPLETE
+    INCOMPLETE,
+    VOIDED
 }
