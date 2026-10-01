@@ -27,3 +27,6 @@
 | D-08 | 錯誤回應格式：`{ "code": "...", "message": "..." }` | 簡單、前端好處理；不暴露堆疊或內部細節 | RFC 9457 ProblemDetail：更標準，欄位較多 |
 | D-09 | 密碼編碼用 `DelegatingPasswordEncoder`（預設 bcrypt，雜湊前綴 `{bcrypt}`） | Spring 建議作法，日後可平滑升級演算法 | 直接 `BCryptPasswordEncoder`：欄位較短但難升級 |
 | D-10 | 角色不做階層（ADMIN 不自動包含 MANAGER） | 指南規定管理員不能任意審核 | 角色階層：與需求衝突 |
+| D-11 | 整合測試清空資料庫前，以「資料庫實際回報的名稱」比對明確允許的測試庫，並確認與開發庫不同（審查修正 R1） | JDBC URL 字串結尾不等於實際連到的資料庫（query parameter 可偽裝） | 只靠命名慣例或 URL：可被偽裝或設定錯誤繞過 |
+| D-12 | 密碼上限以 UTF-8 位元組計（自訂 `@MaxUtf8Bytes`），不 trim、不截斷、不預雜湊（審查修正 R4） | bcrypt 只用前 72 bytes；字元數無法保證位元組上限 | 預雜湊（SHA-256 再 bcrypt）可取消限制，但屬未規劃的設計變更，需另行決定 |
+| D-13 | 認證機制故障用非 Security 的例外表示，回 500（審查修正 R2） | Security 的 AuthenticationException 最終一律變 401，會把故障偽裝成帳密錯誤 | 在 entry point 依例外型別分流：較分散、較難測 |

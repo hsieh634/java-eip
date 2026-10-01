@@ -8,52 +8,16 @@
 //   E2E_BASE_URL                 預設 http://localhost:5173
 //   BROWSER_PATH                 瀏覽器執行檔；未設定時自動尋找 Edge／Chrome
 //   RENEWFLOW_DEV_SEED_PASSWORD  開發帳號密碼；未設定時讀專案根目錄 .env
-import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import puppeteer from 'puppeteer-core'
-
-const here = path.dirname(fileURLToPath(import.meta.url))
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
-const OUT = path.join(here, 'output') // 截圖輸出，已被 .gitignore 排除
-
-function readSeedPassword() {
-  if (process.env.RENEWFLOW_DEV_SEED_PASSWORD) return process.env.RENEWFLOW_DEV_SEED_PASSWORD
-  const envFile = path.resolve(here, '../../.env')
-  if (fs.existsSync(envFile)) {
-    const line = fs.readFileSync(envFile, 'utf8').split(/\r?\n/).find((l) => l.startsWith('RENEWFLOW_DEV_SEED_PASSWORD='))
-    if (line) return line.slice(line.indexOf('=') + 1)
-  }
-  throw new Error('找不到 RENEWFLOW_DEV_SEED_PASSWORD（環境變數或根目錄 .env）')
-}
-
-function findBrowser() {
-  const candidates = [
-    process.env.BROWSER_PATH,
-    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-    'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-    'C:/Program Files/Google/Chrome/Application/chrome.exe',
-    'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  ]
-  const found = candidates.find((p) => p && fs.existsSync(p))
-  if (!found) throw new Error('找不到 Edge／Chrome，請設定 BROWSER_PATH')
-  return found
-}
+import { BASE, OUT, createRunner, launchBrowser, readSeedPassword, trackPageErrors } from './helpers.mjs'
 
 const PW = readSeedPassword()
-fs.mkdirSync(OUT, { recursive: true })
+const { check, finish } = createRunner()
 
-const results = []
-function check(name, ok, detail = '') {
-  results.push({ name, ok })
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`)
-}
-
-const browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true })
+const browser = await launchBrowser()
 const page = await browser.newPage()
 await page.setViewport({ width: 1200, height: 800 })
-const pageErrors = []
-page.on('pageerror', (e) => pageErrors.push(String(e)))
+const tracker = await trackPageErrors(page)
 
 const text = (selector) => page.$eval(selector, (el) => el.textContent)
 
@@ -111,13 +75,12 @@ try {
   await page.click('.topbar .btn')
   await page.waitForSelector('.login-card')
 
-  check('頁面沒有未捕捉的 JS 例外', pageErrors.length === 0, pageErrors.join(' | '))
+  const rejections = await tracker.unhandledRejections()
+  check('頁面沒有未捕捉的 JS 例外與未處理的 Promise 拒絕', tracker.pageErrors.length === 0 && rejections.length === 0, [...tracker.pageErrors, ...rejections].join(' | '))
 } catch (error) {
   check('腳本執行未中斷', false, String(error))
 } finally {
   await browser.close()
 }
 
-const failed = results.filter((r) => !r.ok)
-console.log(`\n${results.length - failed.length}/${results.length} passed`)
-process.exit(failed.length ? 1 : 0)
+finish()

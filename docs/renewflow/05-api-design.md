@@ -15,13 +15,14 @@
 | 項目 | 內容 |
 |---|---|
 | 需要登入 | 否（但需要 CSRF） |
-| 請求 | `{ "username": "string(1..50)", "password": "string(1..72)" }` |
+| 請求 | `{ "username": "string(1..50 字元)", "password": "string(非空白，UTF-8 ≤ 72 bytes)" }` |
 | 200 | `CurrentUserResponse`，並以 `Set-Cookie: JSESSIONID`（HttpOnly）建立 Session，更新 `XSRF-TOKEN` |
-| 400 | `VALIDATION_FAILED`：欄位空白或過長 |
+| 400 | `VALIDATION_FAILED`：欄位空白、帳號超過 50 字元、**密碼超過 72 個 UTF-8 位元組**（在認證之前就拒絕） |
+| 500 | `INTERNAL_ERROR`：認證機制本身故障（例如資料庫連不上）；**不是 401**，回應不含細節 |
 | 401 | `BAD_CREDENTIALS`：帳號不存在、密碼錯誤、帳號停用——**三者訊息相同** |
 | 403 | `CSRF_REJECTED`：缺少或錯誤的 CSRF token |
 
-密碼長度上限 72：bcrypt 只處理前 72 bytes，上限過長會造成「看似不同的密碼其實等價」的誤解。
+密碼上限是 **72 個 UTF-8 位元組**（不是 72 個字元）：bcrypt 只使用前 72 bytes，超過的部分會被忽略，「看似不同的密碼其實等價」。英數字 1 byte、中文字 3 bytes、emoji 4 bytes。不 trim、不截斷。
 
 ### GET /api/auth/me
 

@@ -1,5 +1,6 @@
 package com.renewflow.eip.shared.web;
 
+import com.renewflow.eip.identity.AuthenticationUnavailableException;
 import com.renewflow.eip.identity.InvalidCredentialsException;
 import com.renewflow.eip.identity.UnauthenticatedException;
 import org.slf4j.Logger;
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     ResponseEntity<ApiError> onBadCredentials(InvalidCredentialsException e) {
         return build(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", "帳號或密碼錯誤");
+    }
+
+    @ExceptionHandler(AuthenticationUnavailableException.class)
+    ResponseEntity<ApiError> onAuthenticationUnavailable(AuthenticationUnavailableException e) {
+        // 完整原因（含底層例外）只記在伺服器日誌供排查；回應只有固定文字，不含 SQL、連線資訊或帳密
+        log.error("Authentication backend failure", e);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "系統發生錯誤，請稍後再試");
     }
 
     @ExceptionHandler(UnauthenticatedException.class)

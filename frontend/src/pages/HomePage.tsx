@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CurrentUser, Role } from '../api/auth'
+import { describeLogoutFailure } from '../auth/logoutFailureMessage'
 import { useAuth } from '../auth/useAuth'
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -25,14 +26,33 @@ const PENDING_CARDS = [
 export function HomePage({ user }: Readonly<{ user: CurrentUser }>) {
   const { logout } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
 
+  /**
+   * UI 邊界：在這裡把失敗轉成畫面上的提示。
+   * 成功時 AuthProvider 會把狀態改成 anonymous，App 換成登入頁，此元件隨即卸載，所以只在失敗時更新自己的狀態。
+   */
   async function handleLogout() {
     setLoggingOut(true)
+    setLogoutError(null)
     try {
-      await logout()
-    } finally {
+      const result = await logout()
+      if (!result.ok) {
+        setLogoutError(describeLogoutFailure(result.error))
+        setLoggingOut(false)
+      }
+    } catch (error) {
+      // 防禦：logout() 約定不 reject；萬一有未預期例外，也不讓它變成未處理的 Promise 拒絕
+      setLogoutError(describeLogoutFailure(error))
       setLoggingOut(false)
     }
+  }
+
+  let logoutLabel = '登出'
+  if (loggingOut) {
+    logoutLabel = '登出中…'
+  } else if (logoutError) {
+    logoutLabel = '重試登出'
   }
 
   return (
@@ -45,11 +65,17 @@ export function HomePage({ user }: Readonly<{ user: CurrentUser }>) {
         <div className="topbar__user">
           <span className="topbar__name">{user.displayName}</span>
           <span className="badge">{ROLE_LABEL[user.role]}</span>
-          <button type="button" className="btn" onClick={handleLogout} disabled={loggingOut}>
-            {loggingOut ? '登出中…' : '登出'}
+          <button type="button" className="btn" onClick={() => void handleLogout()} disabled={loggingOut}>
+            {logoutLabel}
           </button>
         </div>
       </header>
+
+      {logoutError && (
+        <div className="banner banner--error" role="alert">
+          {logoutError}
+        </div>
+      )}
 
       <div className="shell__body">
         <nav className="sidebar" aria-label="主選單">

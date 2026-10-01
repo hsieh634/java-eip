@@ -3,7 +3,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_TEST_NAME:renewflow_test}
   flyway:
-    # 僅測試允許 clean；實際執行還有 TestFlywayConfig 的資料庫名稱檢查把關
+    # 僅測試允許 clean；實際執行還有 TestFlywayConfig／TestDatabaseGuard 的資料庫名稱檢查把關
     clean-disabled: false
 
 server:
@@ -16,3 +16,8 @@ server:
 renewflow:
   dev-seed:
     password: ""
+  test:
+    # 明確允許被 clean 的唯一資料庫。實際連線的資料庫（由資料庫回報）必須與它完全相同
+    database: ${DB_TEST_NAME:renewflow_test}
+    # 開發資料庫：用來確認它與上面的測試資料庫不是同一個
+    dev-database: ${DB_NAME:renewflow}

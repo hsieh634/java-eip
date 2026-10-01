@@ -183,6 +183,7 @@ catch (AuthenticationException e) { throw new InvalidCredentialsException(); } /
 
 - 帳號不存在（`UsernameNotFoundException`）、密碼錯誤（`BadCredentialsException`）、停用（`DisabledException`）全部變成同一個 `InvalidCredentialsException`，避免被用來探測帳號。測試 S-05 逐字比對兩種回應。
 - 注意 catch 順序：`InternalAuthenticationServiceException` 是 `AuthenticationException` 的子類別，必須先 catch，否則資料庫掛掉會被誤報成「帳號或密碼錯誤」。
+- **更正（審查修正 R2）**：第 1 輪的寫法是把它「原樣重新丟出」，但它仍是 `AuthenticationException`，會被交還給 Security 並被 entry point 轉成 401，並沒有達到「回系統錯誤」的目的。現已改丟 `AuthenticationUnavailableException`（回 500）。詳見 [T01-T02-review-fixes.md](T01-T02-review-fixes.md)。
 
 ### 5.6 `GlobalExceptionHandler.rethrowSecurityExceptions`
 
@@ -190,7 +191,7 @@ catch (AuthenticationException e) { throw new InvalidCredentialsException(); } /
 
 ### 5.7 `AuthController.me` 與 `getCurrentUser`
 
-員工 ID 來自 `@AuthenticationPrincipal`（Session 內的登入身份）；`getCurrentUser` **重新查資料庫**，若員工已停用或刪除就拋 `UnauthenticatedException` 並順手讓 Session 失效。代價是每次多一次主鍵查詢，換來「停用立即生效」（測試 S-16）。之後所有功能都應照這個模式：**員工 ID 從登入身份取，不接受前端傳 employeeId**。
+員工 ID 來自 `@AuthenticationPrincipal`（Session 內的登入身份）；`getCurrentUser` **重新查資料庫**，若員工已停用或刪除就拋 `UnauthenticatedException` 並順手讓 Session 失效。代價是每次 `/me` 多一次主鍵查詢，換來「**下一次 `/me` 就會發現停用**」（測試 S-16）。**這不是「停用後 Session 立即失效」**：停用到下一次 `/me` 之間，既有 Session 仍然有效；目前只有 `/me` 做這個檢查，T03 起的寫入 API 需要共用的帳號有效性檢查（見 `docs/renewflow/06-security-design.md`）。之後所有功能都應照這個模式：**員工 ID 從登入身份取，不接受前端傳 employeeId**。
 
 ### 5.8 `EmployeeUserDetails implements CredentialsContainer`
 
@@ -213,7 +214,7 @@ catch (AuthenticationException e) { throw new InvalidCredentialsException(); } /
 |---|---|---|
 | 登入寫在 Controller，登出用內建 | 登入流程可從程式讀懂；登出的 Session 失效與 CSRF 清除框架做得更可靠 | 全用內建 Filter：程式少，但需自訂 JSON 處理，較難入門 |
 | Cookie 型 CSRF（雙重提交） | 業界對 SPA 的標準作法；前端好處理 | 伺服器端 Session token：更嚴格，但前端要多一個取 token 的端點。**限制**：雙重提交下伺服器不記憶 token，所以「舊 token 失效」不成立，輪替只是不沿用登入前的值 |
-| `/me` 查資料庫 | 停用立即生效 | 直接回 Session 快照：快，但停用要等 Session 到期 |
+| `/me` 查資料庫 | 下一次 `/me` 即發現停用（不是即時中斷 Session） | 直接回 Session 快照：快，但停用要等 Session 到期才會被發現；逐請求檢查：更即時，T03 再設計 |
 | 角色用字串＋CHECK | 增減角色只需 migration | PG enum：型別變更麻煩 |
 | 整合測試用真 Tomcat＋真 PostgreSQL | 能驗證 Cookie 屬性、Filter 順序、SQL 約束 | MockMvc：快，但驗證不到 Set-Cookie；Testcontainers：隔離更好但多一個套件 |
 | 不引入 react-router／UI 套件 | 只有兩個畫面 | T03 起畫面變多再加 |
@@ -248,11 +249,13 @@ insert into employee (created_at,display_name,employee_no,enabled,password_hash,
 | 登出後舊 Session ID | 401 | S-11 |
 | 登入換發 Session ID，舊 ID 失效 | 通過 | S-15 |
 | 登入後員工被停用 | 下一次 `/me` 即 401 | S-16 |
-| 資料庫連不上 | 500 `INTERNAL_ERROR`（不顯示成密碼錯誤）——**程式有處理，但未做故障注入測試** | 未驗證 |
+| 資料庫連不上 | 500 `INTERNAL_ERROR`（不顯示成密碼錯誤）。**第 1 輪的程式實際上會回 401，這是審查發現的錯誤，已於審查修正 R2 更正並以故障注入測試驗證** | `AuthFailureIntegrationTest`（見 review-fixes） |
 | 重複請求 | 登入／登出是冪等的，無資料一致性問題；T03 起才需要處理 | — |
 | 暴力破解 | **未防護**（假設 A-06） | — |
 
 ## 9. 驗證證據
+
+> 本節是**第 1 輪**（commit `d72fb81`）的證據，不代表目前版本。審查修正後的重跑結果見 [T01-T02-review-fixes.md](T01-T02-review-fixes.md)。
 
 環境：Windows 11、Temurin 21.0.12、Maven 3.9.12（Wrapper 同版）、Node 24.14.0、PostgreSQL 17.11（Docker）。
 
@@ -308,7 +311,7 @@ H2 等替代品的 SQL 行為與 PostgreSQL 不完全相同，也驗證不到真
 
 ### 練習（一次一題）
 
-**題目**：目前 `GET /api/auth/me` 每次都會查資料庫。請**只修改一個地方**，讓回應多一個欄位 `enabled`——先回答：你需要改哪幾個檔案？哪個測試會需要調整或新增？為什麼 `passwordHash` 不能比照辦理？
+**題目**：要讓 `GET /api/auth/me` 的回應多一個欄位 `enabled`，這不是只改一個地方就能完成。請列出需要修改的**所有**檔案或類別（後端與前端，含 DTO、對應轉換、型別、測試），並說明哪個既有測試會需要調整、應該新增什麼測試；另外回答：為什麼 `passwordHash` 不能比照辦理？
 
 建議把答案（文字即可）連同這份文件帶回 ChatGPT 對話，由它批改並給下一題。
 

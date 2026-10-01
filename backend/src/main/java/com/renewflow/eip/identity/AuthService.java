@@ -23,15 +23,18 @@ public class AuthService {
     /**
      * 驗證帳密。成功回傳已驗證的 Authentication（principal 是 EmployeeUserDetails）。
      *
-     * @throws InvalidCredentialsException 帳號不存在、密碼錯誤、帳號停用——全部同一種例外，避免帳號列舉
+     * @throws InvalidCredentialsException        帳號不存在、密碼錯誤、帳號停用——全部同一種例外，避免帳號列舉
+     * @throws AuthenticationUnavailableException 認證機制故障（例如資料庫連不上），對外是 500 而不是 401
      */
     public Authentication authenticate(String username, String password) {
         try {
             return authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(username, password));
         } catch (InternalAuthenticationServiceException e) {
-            // 原因：這是「系統壞了」（例如資料庫連不上），不能偽裝成密碼錯誤，否則故障會被誤判成使用者問題
-            throw e;
+            // 原因：這是「系統壞了」（例如資料庫連不上），不能偽裝成密碼錯誤。
+            // 也不能直接重新丟出 e：它屬於 AuthenticationException，GlobalExceptionHandler 會把它交還給
+            // Security，最終被 entry point 轉成 401。改丟非 Security 例外，才會走到 500 INTERNAL_ERROR。
+            throw new AuthenticationUnavailableException(e);
         } catch (AuthenticationException e) {
             throw new InvalidCredentialsException();
         }

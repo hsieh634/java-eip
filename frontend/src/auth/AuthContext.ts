@@ -14,10 +14,17 @@ export type AuthState =
   | { status: 'authenticated'; user: CurrentUser }
   | { status: 'unavailable'; message: string }
 
+/**
+ * 登出的結果。logout() 永遠不會 reject，失敗以結果表示，由畫面決定如何提示：
+ * - ok:true  → 向後端確認過，已不是登入狀態
+ * - ok:false → 向後端確認過仍是登入狀態（或無法確認）；error 是登出請求本身的錯誤
+ */
+export type LogoutResult = { ok: true } | { ok: false; error: unknown }
+
 export interface AuthContextValue {
   state: AuthState
   login: (username: string, password: string) => Promise<void>
-  logout: () => Promise<void>
+  logout: () => Promise<LogoutResult>
   refresh: () => Promise<void>
 }
 

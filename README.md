@@ -50,12 +50,12 @@ notepad .env          # 把 DB_PASSWORD 與 RENEWFLOW_DEV_SEED_PASSWORD 改成�
 docker compose up -d
 docker compose ps     # 看到 renewflow-db ... (healthy)
 
-# 3. 安裝前端套件
-cd frontend; npm install; cd ..
+# 3. 安裝前端套件（npm ci 依 package-lock.json 安裝完全相同的版本；只有要升級套件時才用 npm install）
+cd frontend; npm ci; cd ..
 ```
 
-> 資料庫初始化腳本只有在「資料卷第一次建立」時才會跑。若之前已建立過資料卷、缺少 `renewflow_test`，執行：
-> `docker compose down -v`（**會刪除本機資料庫內容**）再 `docker compose up -d`。
+> 資料庫初始化腳本只有在「資料卷第一次建立」時才會跑。若資料庫容器是更早建立的、缺少 `renewflow_test`，**不需要刪除資料卷**，只補建缺少的資料庫（見下方第 7 節「常見問題」）。
+> **請不要把 `docker compose down -v` 當成預設處理方式**：它會刪除整個本機資料庫（包含所有開發資料），只有你確定要從零重來時才使用。
 
 ## 3. 啟動（開兩個終端機）
 
@@ -85,7 +85,7 @@ npm run dev
 | `manager` | 主管 |
 | `admin` | 管理員 |
 
-開發帳號只會在 `dev` profile 且該帳號不存在時建立；改 `.env` 的密碼不會更新已存在的帳號（要重設請 `docker compose down -v` 重建資料庫）。
+開發帳號只會在 `dev` profile 且該帳號不存在時建立；改 `.env` 的密碼**不會**更新已存在的帳號。忘記或想改開發帳號密碼時，**不需要重建整個資料庫**，只刪除這三個開發帳號後重啟後端即可重新建立（見第 7 節）。
 
 停止：兩個終端機各按 `Ctrl+C`；資料庫 `docker compose stop`（保留資料）或 `docker compose down`（保留資料卷）。
 
@@ -105,7 +105,8 @@ npm run dev
 ## 5. 測試與建置
 
 ```powershell
-# 後端整合測試（需要資料庫容器在執行）。會清空並重建 renewflow_test，不影響開發資料
+# 後端測試（單元＋整合；整合測試需要資料庫容器在執行）。只會清空並重建 renewflow_test，
+# 清空前會先確認「資料庫實際回報的名稱」就是允許的測試庫，且與開發庫不同，否則直接中止
 cd backend
 .\mvnw.cmd test
 
@@ -122,7 +123,7 @@ cd frontend
 npm run e2e
 ```
 
-腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖輸出在 `frontend/e2e/output/`（不進版控）。它登入／登出開發帳號，所以只能對 dev 環境執行。
+`npm run e2e` 依序執行三支腳本，也可單獨執行：`npm run e2e:smoke`（基本流程）、`npm run e2e:logout`（登出失敗情境）、`e2e:password`（密碼位元組提示）。腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖輸出在 `frontend/e2e/output/`（不進版控）。它登入／登出開發帳號，所以只能對 dev 環境執行。
 
 ## 6. API 使用方式（curl 範例，Windows 請用 `curl.exe`）
 
@@ -150,7 +151,9 @@ curl.exe -s -b jar.txt http://localhost:8080/api/auth/me
 | 後端啟動失敗：`Could not resolve placeholder 'DB_PASSWORD'` | 沒有 `.env`，或不是從 `backend/` 目錄啟動 |
 | 後端啟動失敗：連線被拒絕 | 資料庫沒啟動：`docker compose up -d`，並確認 Docker Desktop 已執行 |
 | `docker compose` 說無法連到 `dockerDesktopLinuxEngine` | Docker Desktop 尚未啟動完成 |
-| 測試失敗：`database "renewflow_test" does not exist` | 資料卷是舊的，見第 2 節的提示 |
+| 測試失敗：`database "renewflow_test" does not exist` | 容器比初始化腳本更早建立，缺少測試資料庫。**只補建，不刪資料**：`docker compose exec db psql -U renewflow -d renewflow -c "CREATE DATABASE renewflow_test"`（名稱與使用者請對應 `.env` 的 `DB_TEST_NAME`、`DB_USER`、`DB_NAME`）。已存在時會回報 already exists，無害。 |
+| 忘記／想更改開發帳號密碼 | 1) 改 `.env` 的 `RENEWFLOW_DEV_SEED_PASSWORD`；2) 只刪三個開發帳號：`docker compose exec db psql -U renewflow -d renewflow -c "DELETE FROM employee WHERE username IN ('admin','manager','employee')"`；3) 重新啟動後端（dev profile），它會用新密碼重新建立。這只影響這三筆資料；若之後的階段有資料關聯到這些帳號，改用其他方式（屆時文件會說明）。 |
+| 測試啟動時出現「拒絕對資料庫執行 clean」 | 這是保護機制在擋：實際連到的資料庫不是明確允許的測試資料庫，或開發／測試資料庫設定相同。檢查 `.env` 的 `DB_NAME` 與 `DB_TEST_NAME` 必須不同，且測試庫名稱需為小寫並以 `_test` 結尾。 |
 | 前端顯示「伺服器暫時無法使用」 | 後端沒開 |
 | 5173 或 8080 埠被占用 | 關掉占用程式；前端設定了 `strictPort`，不會自動換埠 |
 

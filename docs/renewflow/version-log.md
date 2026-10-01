@@ -17,9 +17,10 @@
 | Hibernate ORM／Flyway／PostgreSQL JDBC／Tomcat | 7.4.5.Final／12.4.0／42.7.13／11.0.24 | Boot 4.1.1 BOM |
 | PostgreSQL（Docker `postgres:17-alpine`） | 17.11 | 啟動日誌 |
 | Node.js／npm | 24.14.0／11.9.0 | `node -v`、`npm -v` |
-| React／react-dom | 19.3.0 | `frontend/package-lock.json` |
-| TypeScript／Vite／@vitejs/plugin-react | 6.0.3／8.3.1／6.1.1 | `package-lock.json` |
-| oxlint／puppeteer-core | 1.86.0／25.12.0 | `package-lock.json` |
+| React／react-dom | 19.3.0（MIT） | `frontend/package-lock.json` |
+| TypeScript | 6.0.3（**Apache-2.0**） | `package-lock.json`；授權取自套件的 `package.json` |
+| Vite／@vitejs/plugin-react | 8.3.1／6.1.1（MIT） | `package-lock.json` |
+| oxlint／puppeteer-core | 1.86.0（MIT）／25.12.0（Apache-2.0） | `package-lock.json` |
 
 `package.json` 內的範圍（如 `^19.2.8`、`^1.81.0`）只是允許的最低版本；實際安裝版本以 lockfile 為準。
 
@@ -29,10 +30,19 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 
 ### 已知未解決事項
 
-登入失敗鎖定、改密碼、員工管理、HTTPS／`Secure` Cookie 實測、Session 逾時實測、資料庫中斷的故障注入測試、正式環境同源部署（T06）。
+登入失敗鎖定、改密碼、員工管理、HTTPS／`Secure` Cookie 實測、Session 逾時實測、正式環境同源部署（T06）。（資料庫中斷的故障注入測試已於第 2 輪補上。）
 
 ### 本輪對先前口頭報告的更正
 
 1. 先前寫「oxlint 1.81」是 `package.json` 的最低版本範圍，實際安裝為 1.86.0；React 實際為 19.3.0。
 2. 先前寫「瀏覽器腳本不在專案內」；現已整理為 `frontend/e2e/smoke.mjs`（`npm run e2e`），並新增開發相依套件 `puppeteer-core`。
 3. 先前寫「資料夾不是 git repository」；現已初始化並推送。
+
+## 第 2 輪：審查修正 R1～R4
+
+- 審查基準：`d72fb814f97bb4e4da2e2b61794cefd15a61dd9f`。
+- 修正 commit：標題為 `fix: T01-T02 review fixes ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件：**無**（Mockito 與 Bean Validation 來自既有的 Spring Boot starter；E2E 沿用 puppeteer-core）。
+- 後端測試 17 → 47；前端 E2E 16 → 16＋23＋10。證據與限制見 `docs/learning/T01-T02-review-fixes.md`。
+- 更正：TypeScript 授權為 Apache-2.0（先前口頭報告誤列為 MIT）；安裝說明改用 `npm ci`；停用員工後 Session 的實際行為是「下一次 `/me` 才作廢」，T03 前需補共用檢查。
+- 狀態：已驗證（作者自測）；**尚未經對話助理審查**。

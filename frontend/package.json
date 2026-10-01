@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "e2e": "node e2e/smoke.mjs"
+    "e2e": "node e2e/smoke.mjs && node e2e/logout-failure.mjs && node e2e/password-limit.mjs",
+    "e2e:smoke": "node e2e/smoke.mjs",
+    "e2e:logout": "node e2e/logout-failure.mjs",
+    "e2e:password": "node e2e/password-limit.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

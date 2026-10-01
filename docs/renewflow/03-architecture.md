@@ -17,6 +17,7 @@ java-eip/
 │     │  └─ DevSeedRunner                           （僅 dev profile）
 │     ├─ shared/         跨模組共用
 │     │  ├─ security/    SecurityConfig, CSRF 處理, 401/403 JSON 回應
+│     │  ├─ validation/  MaxUtf8Bytes（自訂 Bean Validation：UTF-8 位元組上限）
 │     │  └─ web/         ApiError, GlobalExceptionHandler
 │     └─ (attendance, timesheet, leave, project, dashboard 於後續階段建立)
 ├─ frontend/           React + TypeScript（Vite）
