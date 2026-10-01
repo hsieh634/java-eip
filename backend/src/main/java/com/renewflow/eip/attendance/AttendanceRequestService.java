@@ -50,14 +50,25 @@ public class AttendanceRequestService {
             throw new InvalidRequestException("請填寫原因");
         }
 
+        boolean hasSnapshot = body.expectedAttendanceId() != null;
+        if (hasSnapshot != (body.expectedVersion() != null)) {
+            throw new InvalidRequestException("表單快照不完整：expectedAttendanceId 與 expectedVersion 必須同時提供或同時省略");
+        }
+
         LocalDate workDate;
         Attendance target;
         Instant requestedIn = null;
         Instant requestedOut = null;
         if (body.type() == AttendanceRequestType.RESET_TODAY) {
             workDate = today; // 重新打卡只針對「今日」，日期由伺服器決定
-            target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
-                    .orElseThrow(() -> new AttendanceConflictException("NO_RECORD_TO_RESET", "今日沒有出勤紀錄，不需要申請重新打卡"));
+            target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today).orElse(null);
+            if (target == null && !hasSnapshot) {
+                throw new AttendanceConflictException("NO_RECORD_TO_RESET", "今日沒有出勤紀錄，不需要申請重新打卡");
+            }
+            if (!hasSnapshot) {
+                throw new InvalidRequestException("申請整組作廢必須附上你看到的紀錄（expectedAttendanceId／expectedVersion）");
+            }
+            requireSameSnapshot(target, body);
         } else {
             if (body.workDate() == null || body.clockInTime() == null) {
                 throw new InvalidRequestException("更正申請必須提供日期與上班時間");
@@ -67,6 +78,7 @@ public class AttendanceRequestService {
             requestedOut = AttendanceTimes.toInstant(workDate, body.clockOutTime());
             AttendanceTimes.validate(workDate, requestedIn, requestedOut, now, today);
             target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, workDate).orElse(null);
+            requireSameSnapshot(target, body);
             if (target != null && Objects.equals(target.getClockInAt(), requestedIn)
                     && Objects.equals(target.getClockOutAt(), requestedOut)) {
                 throw new InvalidRequestException("申請的時間與目前的紀錄相同，沒有需要更正的內容");
@@ -85,6 +97,21 @@ public class AttendanceRequestService {
                 target == null ? null : target.getId(), target == null ? null : target.getVersion(), reason,
                 originalIn, originalOut, requestedIn, requestedOut, null, null, null, null, employeeId, now));
         return views.request(requestRepository.findById(id).orElseThrow(), today);
+    }
+
+    /**
+     * 表單快照必須與「現在」的有效紀錄一致：帶了 ID／版本 → 必須正是那一筆、那個版本；
+     * 沒帶 → 表單看到的是「沒有紀錄」，現在也必須沒有。否則代表員工看的是過期畫面（例如讀取表單後紀錄被更正、
+     * 被作廢並重新打卡），不能用舊的時間提出申請。
+     */
+    private static void requireSameSnapshot(Attendance current, CreateRequest body) {
+        boolean matches = body.expectedAttendanceId() == null
+                ? current == null
+                : current != null && current.getId().equals(body.expectedAttendanceId())
+                        && current.getVersion() == body.expectedVersion();
+        if (!matches) {
+            throw new AttendanceConflictException("RECORD_CHANGED", "出勤資料在你開啟表單後已經變動，請重新確認目前的紀錄後再提出");
+        }
     }
 
     /** 撤回自己的待審申請。別人的申請一律回 404（不洩漏是否存在）。 */

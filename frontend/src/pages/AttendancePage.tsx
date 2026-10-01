@@ -140,7 +140,7 @@ export function AttendancePage() {
             <div className="card__title-row">
               <h2 id="records-title">我的出勤紀錄</h2>
               <button type="button" className="btn btn--small" onClick={() => setCorrection({})}>
-                申請更正／補登
+                申請更正／補登時間
               </button>
             </div>
 

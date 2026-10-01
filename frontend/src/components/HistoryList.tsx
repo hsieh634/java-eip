@@ -1,5 +1,5 @@
 import type { HistoryEntry, TimePair } from '../api/attendanceRequests'
-import { OPERATION_LABEL } from '../attendance/labels'
+import { OPERATION_LABEL, REQUEST_KIND_LABEL } from '../attendance/labels'
 import { formatDateTime, formatTime, formatWorkDate } from '../lib/time'
 
 function pair(value: TimePair | null | undefined): string {
@@ -13,9 +13,10 @@ export function HistoryList({ entries, showEmployee = false }: Readonly<{ entrie
   return (
     <ul className="history-list" data-testid="history-list">
       {entries.map((e) => (
-        <li key={e.id} className="history-item" data-operation={e.operation}>
+        <li key={e.id} className="history-item" data-operation={e.operation} data-kind={e.requestKind ?? undefined}>
           <div className="request-item__head">
             <strong>{OPERATION_LABEL[e.operation]}</strong>
+            {e.requestKind && <span className="status-chip">{REQUEST_KIND_LABEL[e.requestKind]}</span>}
             <span>{formatWorkDate(e.workDate)}</span>
             {showEmployee && <span>員工：{e.employeeName}</span>}
             <span className="muted small">{formatDateTime(e.occurredAt)}</span>
@@ -24,7 +25,7 @@ export function HistoryList({ entries, showEmployee = false }: Readonly<{ entrie
           {e.reason && <p className="small">原因／意見：{e.reason}</p>}
           <p className="small">
             原值：{pair(e.original)}　申請值：{pair(e.requested)}
-            {e.after && <>　修改後：{e.after.voided ? '已作廢（原時間保留）' : pair(e.after)}</>}
+            {e.after && <>　修改後：{e.after.voided ? '整組作廢（原時間保留）' : pair(e.after)}</>}
           </p>
         </li>
       ))}

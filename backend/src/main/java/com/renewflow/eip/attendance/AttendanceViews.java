@@ -9,6 +9,7 @@ import com.renewflow.eip.identity.Employee;
 import com.renewflow.eip.identity.EmployeeRepository;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,7 +51,9 @@ class AttendanceViews {
                     ? attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(r.getEmployeeId(), r.getWorkDate()).orElse(null)
                     : null;
             return new AttendanceRequestResponse(
-                    r.getId(), r.getType(), r.getStatus(), r.getWorkDate(), r.getReason(),
+                    r.getId(), r.getType(),
+                    kindOf(r.getType(), r.getOriginalClockInAt(), r.getOriginalClockOutAt(), r.getRequestedClockInAt(), r.getRequestedClockOutAt()),
+                    r.getStatus(), r.getWorkDate(), r.getReason(),
                     new EmployeeSummary(r.getEmployeeId(), employee == null ? null : employee.getEmployeeNo(),
                             employee == null ? null : employee.getDisplayName()),
                     r.getTargetAttendanceId() == null && r.getOriginalClockInAt() == null ? null
@@ -62,6 +65,23 @@ class AttendanceViews {
                     r.getCreatedAt(), r.getReviewedAt(),
                     reviewer == null ? null : reviewer.getDisplayName(), r.getReviewComment());
         }).toList();
+    }
+
+    /**
+     * 給人看的申請類別。撤銷下班沿用 CORRECT_TIME，但內容很明確：原本上下班都有、希望上班時間完全不變、希望下班為空。
+     * 依「內容」判斷而不是另外存一個欄位，避免兩者不一致。
+     */
+    static String kindOf(AttendanceRequestType type, Instant originalIn, Instant originalOut, Instant requestedIn, Instant requestedOut) {
+        if (type == null) {
+            return null;
+        }
+        if (type == AttendanceRequestType.RESET_TODAY) {
+            return "RESET_TODAY";
+        }
+        if (originalIn != null && originalOut != null && requestedOut == null && originalIn.equals(requestedIn)) {
+            return "REVOKE_CLOCK_OUT";
+        }
+        return "CORRECT_TIME";
     }
 
     /**
@@ -89,7 +109,9 @@ class AttendanceViews {
         Map<Long, Employee> employees = employeesById(ids);
 
         return entries.stream().map(h -> new HistoryEntryResponse(
-                h.getId(), h.getOperation(), h.getWorkDate(), h.getRequestId(), h.getRequestType(), h.getReason(),
+                h.getId(), h.getOperation(), h.getWorkDate(), h.getRequestId(), h.getRequestType(),
+                kindOf(h.getRequestType(), h.getOriginalClockInAt(), h.getOriginalClockOutAt(), h.getRequestedClockInAt(), h.getRequestedClockOutAt()),
+                h.getReason(),
                 nameOf(employees, h.getActorId()), nameOf(employees, h.getEmployeeId()),
                 new TimePair(h.getOriginalClockInAt(), h.getOriginalClockOutAt()),
                 h.getRequestedClockInAt() == null && h.getRequestedClockOutAt() == null ? null

@@ -76,10 +76,10 @@ public class AttendanceService {
                 .map(a -> {
                     AttendanceRecordResponse record = AttendanceRecordResponse.from(a, today);
                     return new TodayAttendanceResponse(record.status(), today, BusinessTime.ZONE.getId(),
-                            a.getClockInAt(), a.getClockOutAt(), unfinishedBefore);
+                            a.getClockInAt(), a.getClockOutAt(), unfinishedBefore, a.getId(), a.getVersion());
                 })
                 .orElseGet(() -> new TodayAttendanceResponse(AttendanceStatus.NOT_STARTED, today,
-                        BusinessTime.ZONE.getId(), null, null, unfinishedBefore));
+                        BusinessTime.ZONE.getId(), null, null, unfinishedBefore, null, null));
     }
 
     /**

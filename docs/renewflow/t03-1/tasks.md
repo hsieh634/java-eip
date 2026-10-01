@@ -16,3 +16,17 @@
 | T031-10 | 前端：出勤管理（ADMIN） | ☑ |
 | T031-11 | E2E `attendance-corrections.mjs`（隔離堆疊） | ☑ |
 | T031-12 | README、共用文件、學習文件 `T03-1-attendance-corrections.md` | ☑ |
+
+## 第 1 輪複審（R1–R3＋三種申請操作）
+
+細節與驗收情境見 `review-round-1.md`；狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。
+
+| # | 工作 | 狀態 |
+|---|---|---|
+| RR-1 | 規格與 tasks（`review-round-1.md`、API 文件） | ☑ |
+| RR-2 | R3 `TemporaryDatabases`＋替身測試；改寫真實啟動測試 | ☑ |
+| RR-3 | R1 直接更正 ID＋版本 | ☑ |
+| RR-4 | 申請快照核對、`kind`、今日回應 `recordId／version` | ☑ |
+| RR-5 | 前端三種操作、R2 重新查詢 | ☑ |
+| RR-6 | 後端與 E2E 回歸 | ☑ |
+| RR-7 | 學習文件 `T03-1-review-fixes.md`、README、版本紀錄 | ☑ |

@@ -103,13 +103,30 @@ abstract class CorrectionsTestBase extends AttendanceTestBase {
         return "\"" + value + "\"";
     }
 
+    /** 像前端一樣：先查今日（取得 recordId／version 快照），再提出整組作廢申請。 */
     Reply submitReset(TestBrowser browser, String reason) {
-        return browser.post(REQUESTS, json("type", str("RESET_TODAY"), "reason", str(reason)));
+        var today = browser.get(TODAY).json();
+        String snapshot = today.get("recordId").isNull() ? ""
+                : ",\"expectedAttendanceId\":" + today.get("recordId").asLong() + ",\"expectedVersion\":" + today.get("version").asLong();
+        return browser.post(REQUESTS, "{\"type\":\"RESET_TODAY\",\"reason\":" + str(reason) + snapshot + "}");
     }
 
+    /** 某日（員工自己）目前的有效紀錄快照，格式為 JSON 片段；沒有紀錄則為空字串。 */
+    String snapshotOf(TestBrowser browser, String workDate) {
+        var records = browser.get("/api/attendance/me?from=" + workDate + "&to=" + workDate).json().get("records");
+        for (var r : records) {
+            if (!"VOIDED".equals(r.get("status").asString())) {
+                return ",\"expectedAttendanceId\":" + r.get("id").asLong() + ",\"expectedVersion\":" + r.get("version").asLong();
+            }
+        }
+        return "";
+    }
+
+    /** 像前端一樣：先查該日目前的紀錄（快照），再提出更正／補登申請。 */
     Reply submitCorrection(TestBrowser browser, String workDate, String in, String out, String reason) {
-        return browser.post(REQUESTS, json("type", str("CORRECT_TIME"), "workDate", str(workDate),
-                "clockInTime", in == null ? "null" : str(in), "clockOutTime", out == null ? "null" : str(out), "reason", str(reason)));
+        String body = json("type", str("CORRECT_TIME"), "workDate", str(workDate),
+                "clockInTime", in == null ? "null" : str(in), "clockOutTime", out == null ? "null" : str(out), "reason", str(reason));
+        return browser.post(REQUESTS, body.substring(0, body.length() - 1) + snapshotOf(browser, workDate) + "}");
     }
 
     long idOf(Reply created) {

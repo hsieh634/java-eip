@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { fetchRecords, type AttendanceRecord } from '../api/attendance'
 import { submitRequest } from '../api/attendanceRequests'
 import { useApiErrorMessage } from '../auth/useApiErrorMessage'
-import { formatTime, taipeiToday, toTimeInputValue } from '../lib/time'
+import { formatTime, submittedTime, taipeiToday, toTimeInputValue } from '../lib/time'
 
 interface CorrectionFormProps {
   initialDate?: string
@@ -16,7 +16,8 @@ type Original = { kind: 'loading' } | { kind: 'ready'; record: AttendanceRecord 
  * 申請補登／更正時間。
  * 每次選擇日期都向後端查詢「該日目前的有效紀錄」來預填，並清楚區分「原時間」與「申請時間」——
  * 不使用畫面上可能已過期的列表資料。沒有紀錄的日期也能提出（漏打卡）。
- * 清空下班時間＝申請撤銷下班（誤按下班）。員工只是提出「希望值」，核准前不會改動正式出勤。
+ * 送出時附上查到的紀錄 ID＋版本（快照）；查詢之後資料被更正、作廢或替換，後端會拒絕，請重新選擇日期再提出。
+ * 今日誤按下班建議用今日卡片的「申請撤銷下班打卡」。員工只是提出「希望值」，核准前不會改動正式出勤。
  */
 export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<CorrectionFormProps>) {
   const messageOf = useApiErrorMessage()
@@ -60,10 +61,22 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
     if (!clockIn) return setError('請填寫上班時間。')
     if (clockOut && clockOut < clockIn) return setError('下班時間不能早於上班時間。')
     if (!reason.trim()) return setError('請填寫原因。')
+    if (original.kind !== 'ready') return setError('無法取得這一天目前的資料，請重新選擇日期後再試。')
     setError(null)
     setSubmitting(true)
+    const record = original.record
     try {
-      await submitRequest({ type: 'CORRECT_TIME', workDate, clockInTime: clockIn, clockOutTime: clockOut || null, reason: reason.trim() })
+      await submitRequest({
+        type: 'CORRECT_TIME',
+        workDate,
+        // 沒改動的預填值送出完整精度的原值（避免小數秒被截斷而變成「有改」）
+        clockInTime: submittedTime(clockIn, record?.clockInAt ?? null),
+        clockOutTime: clockOut ? submittedTime(clockOut, record?.clockOutAt ?? null) : null,
+        reason: reason.trim(),
+        // 快照：表單看到的那一筆（或「沒有紀錄」）。資料在這之後變動 → 後端 409 RECORD_CHANGED
+        expectedAttendanceId: record?.id ?? null,
+        expectedVersion: record?.version ?? null,
+      })
       onSubmitted()
     } catch (e) {
       setError(messageOf(e))
@@ -81,7 +94,7 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
 
   return (
     <form className="correction-form" onSubmit={handleSubmit} noValidate>
-      <h3>申請更正／補登</h3>
+      <h3>申請更正／補登時間</h3>
       <div className="form-grid">
         <label htmlFor="corr-date">業務日期</label>
         <input id="corr-date" type="date" max={today} value={workDate} onChange={(e) => changeDate(e.target.value)} />

@@ -2,12 +2,12 @@ import { useState } from 'react'
 import * as admin from '../api/adminAttendance'
 import type { AttendanceRecord } from '../api/attendance'
 import type { AttendanceRequest } from '../api/attendanceRequests'
-import { RECORD_STATUS_LABEL, REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL, describeTimes } from '../attendance/labels'
+import { RECORD_STATUS_LABEL, REQUEST_KIND_LABEL, REQUEST_STATUS_LABEL, describeTimes } from '../attendance/labels'
 import { useAutoRefresh } from '../attendance/useAutoRefresh'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { HistoryList } from '../components/HistoryList'
 import { FormError } from '../lib/formError'
-import { formatDateTime, formatTime, formatWorkDate, inclusiveDays, taipeiToday, toTimeInputValue } from '../lib/time'
+import { formatDateTime, formatTime, formatWorkDate, inclusiveDays, submittedTime, taipeiToday, toTimeInputValue } from '../lib/time'
 import { useLoad } from '../lib/useLoad'
 import type { CurrentUser } from '../api/auth'
 
@@ -32,7 +32,7 @@ function AdminContent() {
   return (
     <>
       <h1>出勤管理</h1>
-      <p className="muted">審核員工的重新打卡與更正申請，或在填寫原因後直接更正。每一項操作都會留下歷程。</p>
+      <p className="muted">審核員工的撤銷下班、整組作廢與更正申請，或在填寫原因後直接更正。每一項操作都會留下歷程。</p>
       <div className="stack">
         <PendingRequests />
         <EmployeeAttendance />
@@ -87,10 +87,10 @@ function PendingRequests() {
       {state.kind === 'ready' && state.data.length > 0 && (
         <ul className="request-list" data-testid="admin-requests">
           {state.data.map((r) => (
-            <li key={r.id} className="request-item" data-status={r.status} data-request-id={r.id}>
+            <li key={r.id} className="request-item" data-status={r.status} data-request-id={r.id} data-kind={r.kind}>
               <div className="request-item__head">
                 <strong>{r.employee.displayName}（{r.employee.employeeNo}）</strong>
-                <span>{REQUEST_TYPE_LABEL[r.type]}</span>
+                <span>{REQUEST_KIND_LABEL[r.kind]}</span>
                 <span>{formatWorkDate(r.workDate)}</span>
                 <span className={`status-chip status-chip--req-${r.status.toLowerCase()}`}>{REQUEST_STATUS_LABEL[r.status]}</span>
               </div>
@@ -130,6 +130,18 @@ function PendingRequests() {
   )
 }
 
+/** 核准後的預計結果。撤銷下班與整組作廢對資料的影響不同，必須明確寫出來。 */
+function expectedResult(request: AttendanceRequest): string {
+  switch (request.kind) {
+    case 'RESET_TODAY':
+      return '整組作廢：原紀錄（上班與下班）標為作廢，原時間保留在歷程中；今日回到「尚未上班」，員工需重新打上班與下班卡。'
+    case 'REVOKE_CLOCK_OUT':
+      return `撤銷下班：同一筆紀錄保留上班時間 ${formatTime(request.original?.clockInAt ?? null)}、清除下班時間，員工恢復「工作中」，可再次下班打卡。不會作廢紀錄。`
+    default:
+      return request.original ? `更正為 ${describeTimes(request.requested)}` : `新增補登紀錄 ${describeTimes(request.requested)}`
+  }
+}
+
 /** 執行前清楚列出：員工、日期、原值，以及核准後的預計結果。 */
 function ExpectedOutcome({ request }: Readonly<{ request: AttendanceRequest }>) {
   return (
@@ -139,17 +151,11 @@ function ExpectedOutcome({ request }: Readonly<{ request: AttendanceRequest }>) 
       <dt>日期</dt>
       <dd>{formatWorkDate(request.workDate)}</dd>
       <dt>申請類型</dt>
-      <dd>{REQUEST_TYPE_LABEL[request.type]}</dd>
+      <dd>{REQUEST_KIND_LABEL[request.kind]}</dd>
       <dt>原值</dt>
       <dd>{describeTimes(request.original)}</dd>
       <dt>預計結果</dt>
-      <dd data-testid="expected-outcome">
-        {request.type === 'RESET_TODAY'
-          ? '原紀錄標為作廢（原時間保留在歷程中），今日回到「尚未上班」，員工可重新打卡一組。'
-          : request.original
-            ? `更正為 ${describeTimes(request.requested)}`
-            : `新增補登紀錄 ${describeTimes(request.requested)}`}
-      </dd>
+      <dd data-testid="expected-outcome">{expectedResult(request)}</dd>
     </dl>
   )
 }
@@ -212,12 +218,13 @@ function EmployeeAttendance() {
   const [employeeId, setEmployeeId] = useState('')
   const [from, setFrom] = useState(monthStart(today))
   const [to, setTo] = useState(today)
-  const [applied, setApplied] = useState<{ employeeId: number; from: string; to: string } | null>(null)
+  // seq：每按一次「查詢」就 +1。條件完全相同時 key 也會改變，useLoad 才會重新向後端取得（R2）
+  const [applied, setApplied] = useState<{ employeeId: number; from: string; to: string; seq: number } | null>(null)
   const [rangeError, setRangeError] = useState<string | null>(null)
   const [action, setAction] = useState<DirectAction | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const key = applied ? `${applied.employeeId}|${applied.from}|${applied.to}` : 'none'
+  const key = applied ? `${applied.employeeId}|${applied.from}|${applied.to}|${applied.seq}` : 'none'
   const records = useLoad(applied ? () => admin.fetchEmployeeRecords(applied.employeeId, applied.from, applied.to) : null, `records:${key}`)
   const history = useLoad(applied ? () => admin.fetchEmployeeHistory(applied.employeeId, applied.from, applied.to) : null, `history:${key}`)
 
@@ -228,7 +235,7 @@ function EmployeeAttendance() {
     if (inclusiveDays(from, to) > MAX_RANGE_DAYS) return setRangeError(`日期範圍最多 ${MAX_RANGE_DAYS} 天（含起訖日）。`)
     setRangeError(null)
     setNotice(null)
-    setApplied({ employeeId: Number(employeeId), from, to })
+    setApplied((prev) => ({ employeeId: Number(employeeId), from, to, seq: (prev?.seq ?? 0) + 1 }))
   }
 
   function done(message: string) {
@@ -377,7 +384,10 @@ interface DialogProps {
   onDone: (message: string) => void
 }
 
-/** 直接更正（record 為 null＝建立／補登）。必填原因；以版本偵測資料是否已被改過；明確顯示原值與預計結果。 */
+/**
+ * 直接更正（record 為 null＝建立／補登）。必填原因；以「紀錄 ID＋版本」偵測資料是否已被改過或換成另一筆；
+ * 明確顯示原值與預計結果。
+ */
 function DirectCorrectionDialog({ employeeId, employeeName, record, onClose, onDone }: Readonly<DialogProps & { record: AttendanceRecord | null }>) {
   const today = taipeiToday()
   const [workDate, setWorkDate] = useState(record?.workDate ?? today)
@@ -396,9 +406,11 @@ function DirectCorrectionDialog({ employeeId, employeeName, record, onClose, onD
         await admin.correctDirectly({
           employeeId,
           workDate,
+          // 更正：同時送出「這一筆」的 ID 與版本；新增：兩者皆 null
+          attendanceId: record ? record.id : null,
           expectedVersion: record ? record.version : null,
-          clockInTime: clockIn,
-          clockOutTime: clockOut || null,
+          clockInTime: submittedTime(clockIn, record?.clockInAt ?? null),
+          clockOutTime: clockOut ? submittedTime(clockOut, record?.clockOutAt ?? null) : null,
           reason: reason.trim(),
         })
         onDone(`已${record ? '更正' : '新增'} ${employeeName} ${workDate} 的出勤。`)

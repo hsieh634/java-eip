@@ -188,7 +188,9 @@ class AttendanceRequestIntegrationTest extends CorrectionsTestBase {
     void forgedFieldsAreIgnored() {
         TestBrowser aliceB = loginAs("alice");
         punch(aliceB, CLOCK_IN, "2026-10-01T01:00:00Z");
-        String forged = "{\"type\":\"RESET_TODAY\",\"reason\":\"偽造\",\"employeeId\":" + bob.getId()
+        var today = aliceB.get(TODAY).json();
+        String forged = "{\"type\":\"RESET_TODAY\",\"reason\":\"偽造\",\"expectedAttendanceId\":" + today.get("recordId").asLong()
+                + ",\"expectedVersion\":" + today.get("version").asLong() + ",\"employeeId\":" + bob.getId()
                 + ",\"status\":\"APPROVED\",\"reviewerId\":" + carol.getId() + ",\"createdAt\":\"2000-01-01T00:00:00Z\"}";
 
         Reply created = aliceB.post(REQUESTS, forged);

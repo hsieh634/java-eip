@@ -35,3 +35,17 @@
 | E-01 | 員工申請 → 管理員核准 → 員工重新打卡（瀏覽器完整流程）；歷程與作廢紀錄可見 | 通過 | E2E |
 | E-02 | 補登、撤銷下班、退回、撤回；非管理員無入口且 API 403 | 通過 | E2E |
 | E-03 | 行動版（申請、核准）；視窗 focus 與跨台北日期觸發重新查詢 | 通過 | E2E |
+
+## 第 1 輪複審新增（F-01～F-14）
+
+完整表格見 `review-round-1.md` 第 4 節。對應的測試：
+
+| 編號 | 自動測試 | E2E |
+|---|---|---|
+| F-01～F-03（R1） | `ReviewRound1IntegrationTest` | E5（ID 不同但版本相同的舊對話框被拒） |
+| F-04（R1 既有） | `AttendanceAdminIntegrationTest`、`AttendanceCorrectionConcurrencyIntegrationTest` | — |
+| F-05（R2） | — | E8 |
+| F-06、F-07（R3） | `TemporaryDatabasesTest`、`E2eStackGuardTest` | — |
+| F-08～F-11（撤銷下班） | `ReviewRound1IntegrationTest` | E4 |
+| F-12（舊快照） | `ReviewRound1IntegrationTest` | E4（舊表單被拒） |
+| F-13、F-14（整組作廢 vs 撤銷下班） | `ReviewRound1IntegrationTest` | E1、E4 |

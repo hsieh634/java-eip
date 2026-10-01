@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { AttendanceRequest } from '../api/attendanceRequests'
 import { cancelRequest } from '../api/attendanceRequests'
-import { REQUEST_STATUS_LABEL, REQUEST_TYPE_LABEL, describeTimes } from '../attendance/labels'
+import { REQUEST_KIND_LABEL, REQUEST_STATUS_LABEL, describeTimes } from '../attendance/labels'
 import type { RequestsState } from '../attendance/useMyRequests'
 import { useApiErrorMessage } from '../auth/useApiErrorMessage'
 import { formatWorkDate } from '../lib/time'
@@ -64,9 +64,9 @@ export function RequestsPanel({ state, reload, onChanged }: Readonly<RequestsPan
 
 function RequestItem({ request, busy, onCancel }: Readonly<{ request: AttendanceRequest; busy: boolean; onCancel: () => void }>) {
   return (
-    <li className="request-item" data-status={request.status}>
+    <li className="request-item" data-status={request.status} data-kind={request.kind}>
       <div className="request-item__head">
-        <strong>{REQUEST_TYPE_LABEL[request.type]}</strong>
+        <strong>{REQUEST_KIND_LABEL[request.kind]}</strong>
         <span>{formatWorkDate(request.workDate)}</span>
         <span className={`status-chip status-chip--req-${request.status.toLowerCase()}`}>{REQUEST_STATUS_LABEL[request.status]}</span>
       </div>

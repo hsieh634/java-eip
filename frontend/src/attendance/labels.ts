@@ -1,5 +1,5 @@
 import type { AttendanceStatus } from '../api/attendance'
-import type { HistoryOperation, RequestStatus, RequestType, TimePair } from '../api/attendanceRequests'
+import type { HistoryOperation, RequestKind, RequestStatus, TimePair } from '../api/attendanceRequests'
 import { formatTime } from '../lib/time'
 
 export const RECORD_STATUS_LABEL: Record<AttendanceStatus, string> = {
@@ -10,9 +10,11 @@ export const RECORD_STATUS_LABEL: Record<AttendanceStatus, string> = {
   VOIDED: '已作廢（重新打卡）',
 }
 
-export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
-  RESET_TODAY: '申請重新打卡',
-  CORRECT_TIME: '申請更正／補登',
+/** 依申請種類（kind）顯示；撤銷下班與整組作廢的資料影響完全不同，名稱必須能一眼分辨。 */
+export const REQUEST_KIND_LABEL: Record<RequestKind, string> = {
+  REVOKE_CLOCK_OUT: '撤銷下班打卡',
+  RESET_TODAY: '整組作廢並重新打卡',
+  CORRECT_TIME: '更正／補登時間',
 }
 
 export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {

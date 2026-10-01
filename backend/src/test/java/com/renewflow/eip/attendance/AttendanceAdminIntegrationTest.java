@@ -338,8 +338,9 @@ class AttendanceAdminIntegrationTest extends CorrectionsTestBase {
 
     // ---------------- C-20 / C-21 直接更正與作廢 ----------------
 
-    private String correctionBody(long employeeId, String workDate, Long expectedVersion, String in, String out, String reason) {
+    private String correctionBody(long employeeId, String workDate, Long attendanceId, Long expectedVersion, String in, String out, String reason) {
         return json("employeeId", String.valueOf(employeeId), "workDate", str(workDate),
+                "attendanceId", attendanceId == null ? "null" : String.valueOf(attendanceId),
                 "expectedVersion", expectedVersion == null ? "null" : String.valueOf(expectedVersion),
                 "clockInTime", str(in), "clockOutTime", out == null ? "null" : str(out), "reason", str(reason));
     }
@@ -354,7 +355,7 @@ class AttendanceAdminIntegrationTest extends CorrectionsTestBase {
         clock.set(utc("2026-10-01T06:00:00Z"));
         long version = activeVersion(alice, "2026-10-01");
 
-        Reply reply = carolB.post(ADMIN + "/records/correct", correctionBody(alice.getId(), "2026-10-01", version, "08:30:00", "13:00:00", "主管當面確認實際時間"));
+        Reply reply = carolB.post(ADMIN + "/records/correct", correctionBody(alice.getId(), "2026-10-01", activeId(alice, "2026-10-01"), version, "08:30:00", "13:00:00", "主管當面確認實際時間"));
 
         assertThat(reply.status()).isEqualTo(200);
         assertThat(reply.json().get("version").asLong()).isEqualTo(version + 1);
@@ -379,16 +380,16 @@ class AttendanceAdminIntegrationTest extends CorrectionsTestBase {
         long version = activeVersion(alice, "2026-10-01");
         String path = ADMIN + "/records/correct";
 
-        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", version, "08:30:00", null, "  ")).status()).isEqualTo(400);
-        Reply self = carolB.post(path, correctionBody(carol.getId(), "2026-10-01", null, "08:30:00", null, "改自己"));
+        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", activeId(alice, "2026-10-01"), version, "08:30:00", null, "  ")).status()).isEqualTo(400);
+        Reply self = carolB.post(path, correctionBody(carol.getId(), "2026-10-01", null, null, "08:30:00", null, "改自己"));
         assertThat(self.status()).isEqualTo(403);
         assertThat(self.code()).isEqualTo("SELF_CORRECTION_FORBIDDEN");
-        assertThat(carolB.post(path, correctionBody(999999, "2026-10-01", null, "08:30:00", null, "不存在")).code()).isEqualTo("EMPLOYEE_NOT_FOUND");
-        Reply wrongVersion = carolB.post(path, correctionBody(alice.getId(), "2026-10-01", version + 5, "08:30:00", null, "版本不符"));
+        assertThat(carolB.post(path, correctionBody(999999, "2026-10-01", null, null, "08:30:00", null, "不存在")).code()).isEqualTo("EMPLOYEE_NOT_FOUND");
+        Reply wrongVersion = carolB.post(path, correctionBody(alice.getId(), "2026-10-01", activeId(alice, "2026-10-01"), version + 5, "08:30:00", null, "版本不符"));
         assertThat(wrongVersion.status()).isEqualTo(409);
         assertThat(wrongVersion.code()).isEqualTo("RECORD_CHANGED");
-        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", version, "20:00:00", null, "未來時間")).code()).isEqualTo("INVALID_REQUEST");
-        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", null, "08:30:00", null, "該日已有紀錄卻要建立")).code()).isEqualTo("RECORD_CHANGED");
+        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", activeId(alice, "2026-10-01"), version, "20:00:00", null, "未來時間")).code()).isEqualTo("INVALID_REQUEST");
+        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", null, null, "08:30:00", null, "該日已有紀錄卻要建立")).code()).isEqualTo("RECORD_CHANGED");
 
         assertThat(activeColumn(alice, "2026-10-01", "clock_in_at")).as("以上全部被擋，紀錄沒有被改").startsWith("2026-10-01 01:00:00");
         assertThat(historyRows()).as("被擋下的操作不寫歷程").isZero();
@@ -399,7 +400,7 @@ class AttendanceAdminIntegrationTest extends CorrectionsTestBase {
     void directCreation() {
         TestBrowser carolB = loginAs("carol");
 
-        Reply reply = carolB.post(ADMIN + "/records/correct", correctionBody(alice.getId(), "2026-09-30", null, "09:00:00", "18:00:00", "忘記打卡，當面確認"));
+        Reply reply = carolB.post(ADMIN + "/records/correct", correctionBody(alice.getId(), "2026-09-30", null, null, "09:00:00", "18:00:00", "忘記打卡，當面確認"));
 
         assertThat(reply.status()).isEqualTo(200);
         assertThat(reply.json().get("source").asString()).isEqualTo("MANUAL");

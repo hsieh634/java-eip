@@ -33,7 +33,22 @@ export function toTimeInputValue(iso: string | null): string {
   return iso ? timeFormat.format(new Date(iso)) : ''
 }
 
-const dateTimeFormat = new Intl.DateTimeFormat('zh-TW', {
+/**
+ * 時間點 → 完整精度的台北時間（例如 12:26:23.631575）。
+ * JavaScript 的 Date 只到毫秒，所以小數秒直接從後端回傳的字串取出（台北與 UTC 相差整數小時，不影響小數秒）。
+ * 用在「上班時間必須原樣保留」的申請（撤銷下班），以及未修改的預填值，避免被悄悄截斷成整秒。
+ */
+export function toPreciseTimeValue(iso: string): string {
+  const fraction = /T\d{2}:\d{2}:\d{2}(\.\d+)/.exec(iso)?.[1] ?? ''
+  return timeFormat.format(new Date(iso)) + fraction
+}
+
+/** 表單送出的時間：使用者沒有修改預填值時送出完整精度的原值，有修改時送出輸入值。 */
+export function submittedTime(input: string, originalIso: string | null): string {
+  return originalIso && input === toTimeInputValue(originalIso) ? toPreciseTimeValue(originalIso) : input
+}
+
+const dateTimeFormat =new Intl.DateTimeFormat('zh-TW', {
   timeZone: BUSINESS_TIME_ZONE,
   year: 'numeric',
   month: '2-digit',

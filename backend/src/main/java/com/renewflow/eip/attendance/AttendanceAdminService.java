@@ -176,31 +176,43 @@ public class AttendanceAdminService {
         if (reason.isEmpty()) {
             throw new InvalidRequestException("請填寫原因");
         }
+        // 兩種模式必須明確：更正既有紀錄＝ID＋版本都帶；補登＝兩者都不帶。只帶其一是不完整的請求。
+        boolean correctingExisting = body.attendanceId() != null;
+        if (correctingExisting != (body.expectedVersion() != null)) {
+            throw new InvalidRequestException("更正既有紀錄必須同時提供 attendanceId 與 expectedVersion；補登新紀錄兩者都不提供");
+        }
         Instant clockIn = AttendanceTimes.toInstant(body.workDate(), body.clockInTime());
         Instant clockOut = AttendanceTimes.toInstant(body.workDate(), body.clockOutTime());
         AttendanceTimes.validate(body.workDate(), clockIn, clockOut, now, today);
 
-        Attendance before = attendanceRepository
-                .findByEmployeeIdAndWorkDateAndVoidedAtIsNull(body.employeeId(), body.workDate()).orElse(null);
-        if (body.expectedVersion() == null) {
-            // 建立：該日必須沒有有效紀錄
+        Attendance before = null;
+        if (!correctingExisting) {
+            // 補登：該日必須沒有有效紀錄（部分唯一索引裁決；0 筆＝已經有了）
             if (attendanceRepository.insertManualIfAbsent(body.employeeId(), body.workDate(), clockIn, clockOut, now) == 0) {
                 throw changed();
             }
         } else {
-            if (before == null || before.getVersion() != body.expectedVersion()) {
-                throw changed();
-            }
+            // 更正：表單當時看到的「那一筆」——ID、員工、日期、有效狀態、版本全部要相符。
+            // 不能改用「現在查到的當日有效紀錄」：舊紀錄被作廢、員工重新打卡後，新紀錄的版本可能剛好相同，
+            // 只比版本會誤改到另一筆。ID 一律用前端帶來的，絕不替換。
+            before = attendanceRepository.findById(body.attendanceId())
+                    .filter(a -> a.getEmployeeId().equals(body.employeeId()))
+                    .filter(a -> a.getWorkDate().equals(body.workDate()))
+                    .filter(a -> !a.isVoided())
+                    .filter(a -> a.getVersion() == body.expectedVersion())
+                    .orElseThrow(AttendanceAdminService::changed);
             if (Objects.equals(before.getClockInAt(), clockIn) && Objects.equals(before.getClockOutAt(), clockOut)) {
                 throw new InvalidRequestException("設定的時間與目前的紀錄相同，沒有需要更正的內容");
             }
-            if (attendanceRepository.correctIfCurrent(before.getId(), body.expectedVersion(), clockIn, clockOut, now) == 0) {
+            // 最終仍以原子條件更新為準（id＋version＋未作廢），擋住「查詢之後、更新之前」的並行變動
+            if (attendanceRepository.correctIfCurrent(body.attendanceId(), body.expectedVersion(), clockIn, clockOut, now) == 0) {
                 throw changed();
             }
         }
 
-        Attendance after = attendanceRepository
-                .findByEmployeeIdAndWorkDateAndVoidedAtIsNull(body.employeeId(), body.workDate()).orElseThrow();
+        Attendance after = correctingExisting
+                ? attendanceRepository.findById(body.attendanceId()).orElseThrow()
+                : attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(body.employeeId(), body.workDate()).orElseThrow();
         auditLog.record(new AuditEntry(AttendanceOperation.DIRECT_CORRECTION, body.employeeId(), body.workDate(), null, null,
                 after.getId(), body.expectedVersion(), reason,
                 before == null ? null : before.getClockInAt(), before == null ? null : before.getClockOutAt(),

@@ -82,7 +82,8 @@ class AttendanceAuditRollbackIntegrationTest extends CorrectionsTestBase {
         clock.set(utc("2026-10-01T06:00:00Z"));
         long version = activeVersion(alice, "2026-10-01");
         breakAuditLog();
-        String body = json("employeeId", String.valueOf(alice.getId()), "workDate", str("2026-10-01"), "expectedVersion", String.valueOf(version),
+        String body = json("employeeId", String.valueOf(alice.getId()), "workDate", str("2026-10-01"),
+                "attendanceId", String.valueOf(activeId(alice, "2026-10-01")), "expectedVersion", String.valueOf(version),
                 "clockInTime", str("08:00:00"), "clockOutTime", "null", "reason", str("回滾"));
 
         Reply failed = carolB.post(ADMIN + "/records/correct", body);

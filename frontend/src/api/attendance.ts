@@ -27,6 +27,9 @@ export interface TodayAttendance {
   clockInAt: string | null
   clockOutAt: string | null
   unfinishedBefore: string | null
+  /** 今日有效紀錄的 ID 與版本（沒有紀錄時為 null）。提出申請時原樣送回，後端用來確認「你看到的仍是目前那一筆」。 */
+  recordId: number | null
+  version: number | null
 }
 
 export interface AttendanceList {

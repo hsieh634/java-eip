@@ -1,5 +1,7 @@
 // T03.1：出勤更正、重新打卡申請與管理權限的瀏覽器端到端驗證，在【隔離堆疊】執行（見 isolated-stack.mjs）：
 // 另一個後端（8081，測試資料庫）＋另一個前端（5174）＋本次專用的新員工與管理員，不會碰你的開發帳號與出勤。
+// 第 1 輪複審新增：E4 撤銷下班打卡（同一筆、上班時間完整保留）＋舊表單被拒、E5 R1（ID 不同但版本相同的舊對話框被拒）、
+// E8 R2（相同條件再按查詢會重新取得）。
 // 執行：cd frontend; npm run e2e:corrections
 import path from 'node:path'
 import { OUT, createRunner, launchBrowser, loginAs } from './helpers.mjs'
@@ -57,7 +59,7 @@ try {
   const no = (letter) => `E${letter}-${stack.runId}`
   const DESKTOP = { width: 1200, height: 900 }
 
-  // ================= E1：申請重新打卡 → 管理員核准 → 員工重新打卡 =================
+  // ================= E1：申請整組作廢並重新打卡 → 管理員核准 → 員工重新打卡 =================
   {
     const ctxA = await browser.createBrowserContext()
     const ctxAdmin = await browser.createBrowserContext()
@@ -75,16 +77,25 @@ try {
     const originalOut = await a.page.$eval('[data-testid=clock-out-time]', (el) => el.textContent)
     check('E1 員工當日已完成上下班，兩顆按鈕皆停用（每日一組）', (await isDisabled(a.page, '上班打卡')) && (await isDisabled(a.page, '下班打卡')))
 
+    // 已下班：兩種今日申請都可以選，名稱可以清楚分辨
+    check('E1 已下班時同時提供「申請撤銷下班打卡」與「申請整組作廢並重新打卡」', (await hasButton(a.page, '申請撤銷下班打卡')) && (await hasButton(a.page, '申請整組作廢並重新打卡')))
     // 申請：原因必填
-    await click(a.page, '申請重新打卡')
+    await click(a.page, '申請整組作廢並重新打卡')
+    await a.page.waitForSelector('[data-testid=reset-form]')
+    const resetFormText = await a.page.$eval('[data-testid=reset-form]', (el) => el.textContent)
+    check('E1 整組作廢表單列出員工、目前上下班，並明確說明「整組」都會作廢、要重新打上下班卡',
+      resetFormText.includes('E2E 員工 A') && resetFormText.includes(originalIn) && resetFormText.includes(originalOut) &&
+      resetFormText.includes('整組打卡（上班與下班）都會標為作廢') && resetFormText.includes('重新打上班卡與下班卡') && resetFormText.includes('申請撤銷下班打卡'))
     await click(a.page, '送出申請')
     await waitText(a.page, '請填寫原因')
-    check('E1 申請原因空白 → 前端提示「請填寫原因」，沒有送出', (await a.page.$('[data-testid=reset-pending]')) === null)
+    check('E1 申請原因空白 → 前端提示「請填寫原因」，沒有送出', (await a.page.$('[data-testid=today-pending]')) === null)
     await setValue(a.page, '#reason-text', '測試功能時誤按上下班，希望重新打卡')
     await click(a.page, '送出申請')
-    await a.page.waitForSelector('[data-testid=reset-pending]')
-    check('E1 送出後顯示「待審核」說明；今日仍是已完成、按鈕仍停用（申請不會立即改動出勤）',
-      (await todayStatus(a.page)) === '今日已完成' && (await isDisabled(a.page, '上班打卡')) && !(await hasButton(a.page, '申請重新打卡')))
+    await a.page.waitForSelector('[data-testid=today-pending]')
+    check('E1 送出後顯示「整組作廢並重新打卡」待審說明；今日仍是已完成、按鈕仍停用（申請不會立即改動出勤）',
+      (await a.page.$eval('[data-testid=today-pending]', (el) => el.dataset.kind)) === 'RESET_TODAY' &&
+      (await todayStatus(a.page)) === '今日已完成' && (await isDisabled(a.page, '上班打卡')) &&
+      !(await hasButton(a.page, '申請整組作廢並重新打卡')) && !(await hasButton(a.page, '申請撤銷下班打卡')))
     await a.page.waitForSelector('[data-testid=my-requests]') // 卡片送出後，「我的申請」是非同步重新載入的
     check('E1 「我的申請」顯示一筆待審核', (await a.page.$eval('[data-testid=my-requests]', (el) => el.textContent)).includes('待審核'))
     await a.page.screenshot({ path: path.join(OUT, 'corrections-01-employee-pending.png') })
@@ -95,12 +106,13 @@ try {
     await admin.page.click('a[href="#/admin/attendance"]')
     await admin.page.waitForSelector('[data-testid=admin-requests]')
     const cardText = await admin.page.evaluate((n) => [...document.querySelectorAll('li.request-item')].find((x) => x.textContent.includes(n)).textContent, no('A'))
-    check('E1 管理員的申請卡片顯示員工、原因、原時間', cardText.includes('E2E 員工 A') && cardText.includes('誤按上下班') && cardText.includes(originalIn))
+    check('E1 管理員的申請卡片顯示員工、種類「整組作廢並重新打卡」、原因、原時間',
+      cardText.includes('E2E 員工 A') && cardText.includes('整組作廢並重新打卡') && cardText.includes('誤按上下班') && cardText.includes(originalIn))
     await adminCardAction(admin.page, no('A'), '核准')
     await admin.page.waitForSelector('[role=dialog]')
     const dialogText = await admin.page.$eval('[role=dialog]', (el) => el.textContent)
-    check('E1 確認視窗清楚列出員工、日期、原值與預計結果（作廢、可重新打卡）',
-      dialogText.includes('E2E 員工 A') && dialogText.includes(originalIn) && dialogText.includes('作廢') && dialogText.includes('重新打卡'))
+    check('E1 確認視窗清楚列出員工、日期、原值與預計結果（整組作廢、回到尚未上班）',
+      dialogText.includes('E2E 員工 A') && dialogText.includes(originalIn) && dialogText.includes('整組作廢') && dialogText.includes('尚未上班'))
     await admin.page.screenshot({ path: path.join(OUT, 'corrections-02-admin-confirm.png') })
     await click(admin.page, '確認核准')
     await waitText(admin.page, '已核准 E2E 員工 A 的申請')
@@ -109,8 +121,8 @@ try {
     // 員工回到視窗 → 重新向後端查詢真實狀態
     await a.page.bringToFront()
     check('E1 員工回到視窗後，今日狀態重新查詢為「尚未上班」', await refocusUntil(a.page, () => document.querySelector('[data-testid=today-status]')?.textContent === '尚未上班'))
-    await a.page.waitForFunction(() => !document.querySelector('[data-testid=reset-pending]')) // 申請清單是另一個請求，稍後才更新
-    check('E1 核准後「重新打卡」的待審說明消失，上班按鈕開放', (await a.page.$('[data-testid=reset-pending]')) === null && !(await isDisabled(a.page, '上班打卡')))
+    await a.page.waitForFunction(() => !document.querySelector('[data-testid=today-pending]')) // 申請清單是另一個請求，稍後才更新
+    check('E1 核准後待審說明消失，上班按鈕開放', (await a.page.$('[data-testid=today-pending]')) === null && !(await isDisabled(a.page, '上班打卡')))
     await click(a.page, '上班打卡')
     await waitStatus(a.page, '工作中')
     await click(a.page, '下班打卡')
@@ -127,7 +139,8 @@ try {
     await click(a.page, '查看歷程')
     await a.page.waitForSelector('[data-testid=history-list]')
     const historyText = await a.page.$eval('[data-testid=history-list]', (el) => el.textContent)
-    check('E1 員工可查看更正歷程：提出申請、核准申請、操作者', historyText.includes('提出申請') && historyText.includes('核准申請') && historyText.includes('E2E 管理員'))
+    check('E1 員工可查看更正歷程：提出申請、核准申請、種類「整組作廢並重新打卡」、操作者',
+      historyText.includes('提出申請') && historyText.includes('核准申請') && historyText.includes('整組作廢並重新打卡') && historyText.includes('E2E 管理員'))
     await a.page.screenshot({ path: path.join(OUT, 'corrections-03-employee-after-approval.png') })
 
     // 管理員的員工出勤查詢
@@ -185,7 +198,7 @@ try {
     await c.page.waitForSelector('[data-testid=today-status]')
 
     const yesterday = taipeiDate(-1)
-    await click(c.page, '申請更正／補登')
+    await click(c.page, '申請更正／補登時間')
     await c.page.waitForSelector('#corr-date')
     await setCorrectionDate(c.page, yesterday)
     check('E3 補登表單：沒有紀錄的日期顯示「原時間：沒有出勤紀錄」', (await c.page.$eval('[data-testid=corr-original]', (el) => el.textContent)).includes('沒有出勤紀錄'))
@@ -217,7 +230,7 @@ try {
     check('E3 員工回到視窗後，紀錄列表出現補登的那一天（標示「補登」）', gotRow && (await bodyText(c.page)).includes('補登'))
 
     // 退回
-    await click(c.page, '申請更正／補登')
+    await click(c.page, '申請更正／補登時間')
     await c.page.waitForSelector('#corr-date')
     await setCorrectionDate(c.page, taipeiDate(-2))
     await setValue(c.page, '#corr-in', '09:30:00')
@@ -239,7 +252,7 @@ try {
     check('E3 被退回的日期沒有新增出勤紀錄', !(await c.page.$$eval('[data-testid=records-table] tbody tr', (rs) => rs.map((r) => r.textContent))).some((t) => t.includes(taipeiDate(-2))))
 
     // 撤回
-    await click(c.page, '申請更正／補登')
+    await click(c.page, '申請更正／補登時間')
     await c.page.waitForSelector('#corr-date')
     await setCorrectionDate(c.page, taipeiDate(-3))
     await setValue(c.page, '#corr-in', '09:10:00')
@@ -254,7 +267,7 @@ try {
     await ctxAdmin.close()
   }
 
-  // ================= E4：撤銷誤按的下班（員工 B） =================
+  // ================= E4：申請撤銷下班打卡（員工 B）＋舊表單被拒絕 =================
   {
     const ctxB = await browser.createBrowserContext()
     const ctxAdmin = await browser.createBrowserContext()
@@ -262,30 +275,87 @@ try {
     await loginAs(b.page, stack.users.b.username, stack.users.b.password, base)
     await b.page.goto(`${base}/#/attendance`, { waitUntil: 'networkidle0' })
     await waitStatus(b.page, '尚未上班')
+    check('E4 尚未打卡時沒有今日申請按鈕', !(await hasButton(b.page, '申請撤銷下班打卡')) && !(await hasButton(b.page, '申請整組作廢並重新打卡')))
     await click(b.page, '上班打卡')
     await waitStatus(b.page, '工作中')
+    await b.page.waitForSelector('[data-testid=records-table]')
+    check('E4 只有上班（工作中）時：可申請整組作廢，但沒有「撤銷下班」', !(await hasButton(b.page, '申請撤銷下班打卡')) && (await hasButton(b.page, '申請整組作廢並重新打卡')))
     await click(b.page, '下班打卡') // 誤按
     await waitStatus(b.page, '今日已完成')
-    await b.page.waitForSelector('[data-testid=records-table]')
-    await click(b.page, '申請更正')
-    await b.page.waitForSelector('[data-testid=corr-original][data-state=ready]')
-    check('E4 更正表單預填目前的上下班時間', (await b.page.$eval('#corr-out', (el) => el.value)) !== '')
-    await setValue(b.page, '#corr-out', '')
-    check('E4 清空下班時間＝撤銷下班，申請時間顯示「無下班時間」', (await b.page.$eval('[data-testid=corr-requested]', (el) => el.textContent)).includes('無下班時間'))
-    await setValue(b.page, '#corr-reason', '誤按下班，要繼續上班')
+    const todayJson = () => b.page.evaluate(async () => (await fetch('/api/attendance/me/today')).json())
+    const before = await todayJson()
+    const shownIn = await b.page.$eval('[data-testid=clock-in-time]', (el) => el.textContent)
+
+    await click(b.page, '申請撤銷下班打卡')
+    await b.page.waitForSelector('[data-testid=revoke-form]')
+    const revokeText = await b.page.$eval('[data-testid=revoke-form]', (el) => el.textContent)
+    const revokeIn = await b.page.$eval('#revoke-in', (el) => ({ value: el.value, readOnly: el.readOnly }))
+    check('E4 撤銷下班表單：顯示員工、日期、目前上下班時間；上班時間唯讀且等於目前上班時間',
+      revokeText.includes('E2E 主管 B') && revokeText.includes(taipeiDate(0)) && revokeText.includes(shownIn) && revokeIn.readOnly && revokeIn.value === shownIn,
+      `${revokeText} | ${JSON.stringify(revokeIn)}`)
+    check('E4 撤銷下班表單寫明結果：「保留上班時間、撤銷下班時間，恢復工作中，可再次下班打卡」',
+      (await b.page.$eval('[data-testid=form-outcome]', (el) => el.textContent)).includes('保留上班時間、撤銷下班時間，恢復工作中，可再次下班打卡'))
     await click(b.page, '送出申請')
-    await b.page.waitForFunction(() => document.querySelector('[data-testid=my-requests]')?.textContent.includes('誤按下班，要繼續上班'))
+    await waitText(b.page, '請填寫原因')
+    check('E4 原因空白 → 前端擋下', (await b.page.$('[data-testid=today-pending]')) === null)
+    await setValue(b.page, '#reason-text', '誤按下班，要繼續上班')
+    await click(b.page, '送出申請')
+    await b.page.waitForSelector('[data-testid=today-pending]')
+    check('E4 送出後待審說明為「撤銷下班打卡」；核准前仍是已完成',
+      (await b.page.$eval('[data-testid=today-pending]', (el) => el.dataset.kind)) === 'REVOKE_CLOCK_OUT' && (await todayStatus(b.page)) === '今日已完成')
 
     const admin = await adminLogin(ctxAdmin, DESKTOP)
     await admin.page.click('a[href="#/admin/attendance"]')
     await adminCardAction(admin.page, no('B'), '核准')
     await admin.page.waitForSelector('[role=dialog]')
+    const revokeDialog = await admin.page.$eval('[role=dialog]', (el) => el.textContent)
+    check('E4 管理員確認視窗：種類「撤銷下班打卡」，預計結果是保留上班、清除下班、不作廢',
+      revokeDialog.includes('撤銷下班打卡') && revokeDialog.includes(`保留上班時間 ${shownIn}`) && revokeDialog.includes('不會作廢紀錄'))
     await click(admin.page, '確認核准')
     await waitText(admin.page, '已核准')
 
     await b.page.bringToFront()
-    check('E4 核准後員工回到視窗：今日恢復「工作中」且下班時間清空', await refocusUntil(b.page, () => document.querySelector('[data-testid=today-status]')?.textContent === '工作中'))
+    check('E4 核准後員工回到視窗：今日恢復「工作中」', await refocusUntil(b.page, () => document.querySelector('[data-testid=today-status]')?.textContent === '工作中'))
+    const after = await todayJson()
+    check('E4 同一筆紀錄（ID 不變）、上班時間完整精度不變、下班清空、版本 +1',
+      after.recordId === before.recordId && after.clockInAt === before.clockInAt && after.clockOutAt === null && after.version === before.version + 1,
+      JSON.stringify({ before, after }))
+    const bRows = await b.page.$$eval('[data-testid=records-table] tbody tr', (trs) => trs.map((r) => r.dataset.status))
+    check('E4 紀錄列表沒有作廢紀錄、只有一筆（撤銷下班不是整組作廢）', bRows.length === 1 && !bRows.includes('VOIDED'), bRows.join(','))
     check('E4 恢復工作中後下班按鈕可再按', !(await isDisabled(b.page, '下班打卡')))
+    await click(b.page, '下班打卡')
+    await waitStatus(b.page, '今日已完成')
+    await click(b.page, '查看歷程')
+    await b.page.waitForSelector('[data-testid=history-list]')
+    const bHistory = await b.page.$$eval('[data-testid=history-list] li', (lis) => lis.map((li) => ({ op: li.dataset.operation, kind: li.dataset.kind, text: li.textContent })))
+    const approvedEntry = bHistory.find((h) => h.op === 'REQUEST_APPROVED')
+    check('E4 歷程標示「撤銷下班打卡」，修改後是時間（不是整組作廢）',
+      approvedEntry?.kind === 'REVOKE_CLOCK_OUT' && approvedEntry.text.includes('撤銷下班打卡') && !approvedEntry.text.includes('整組作廢'), JSON.stringify(approvedEntry))
+
+    // 舊表單：員工開著撤銷表單時，管理員直接更正了這筆紀錄 → 送出被拒絕，不建立申請
+    await click(b.page, '申請撤銷下班打卡')
+    await b.page.waitForSelector('[data-testid=revoke-form]')
+    await admin.page.bringToFront()
+    await selectByText(admin.page, '#admin-employee', no('B'))
+    await click(admin.page, '查詢')
+    await admin.page.waitForSelector('[data-testid=admin-records-table]')
+    await click(admin.page, '更正時間')
+    await admin.page.waitForSelector('[role=dialog]')
+    await setValue(admin.page, '#direct-out', '')
+    await setValue(admin.page, '#direct-reason', '當面確認仍在工作')
+    await click(admin.page, '確認更正')
+    await waitText(admin.page, '已更正 E2E 主管 B').catch(async (e) => {
+      throw new Error(`直接更正沒有成功：${await admin.page.$eval('[role=dialog]', (el) => el.textContent).catch(() => '(無對話框)')}`, { cause: e })
+    })
+    check('E4 管理員以畫面直接更正（同時送出紀錄 ID＋版本）成功', true)
+    await b.page.bringToFront()
+    await setValue(b.page, '#reason-text', '用舊畫面送出')
+    await click(b.page, '送出申請')
+    await waitText(b.page, '出勤資料在你開啟表單後已經變動')
+    check('E4 舊表單送出 → 顯示「資料已變動」，沒有建立待審申請', (await b.page.$('[data-testid=today-pending]')) === null)
+    check('E4 卡片重新查詢後表單提示已過期、今日狀態更新為工作中',
+      await refocusUntil(b.page, () => document.querySelector('[data-testid=form-outdated]') !== null && document.querySelector('[data-testid=today-status]')?.textContent === '工作中'))
+    await click(b.page, '取消')
     await click(b.page, '下班打卡')
     await waitStatus(b.page, '今日已完成')
     await assertNoUnhandled('E4', [b.tracker, admin.tracker])
@@ -293,9 +363,10 @@ try {
     await ctxAdmin.close()
   }
 
-  // ================= E5：管理員直接作廢今日紀錄（員工 A 已有今日紀錄） =================
+  // ================= E5：R1——舊的直接更正對話框不能改到「換上來的另一筆」；管理員直接作廢 =================
   {
     const ctxAdmin = await browser.createBrowserContext()
+    const ctxAdmin2 = await browser.createBrowserContext()
     const ctxA = await browser.createBrowserContext()
     const admin = await adminLogin(ctxAdmin, DESKTOP)
     await admin.page.click('a[href="#/admin/attendance"]')
@@ -303,23 +374,56 @@ try {
     await selectByText(admin.page, '#admin-employee', no('A'))
     await click(admin.page, '查詢')
     await admin.page.waitForSelector('[data-testid=admin-records-table]')
-    await click(admin.page, '作廢今日紀錄')
+    const oldRow = await admin.page.$eval('[data-testid=admin-records-table] tbody tr:not(.row--voided)', (tr) => ({ id: tr.dataset.recordId, version: tr.cells[4].textContent }))
+    await click(admin.page, '更正時間') // 開著「舊紀錄」的更正對話框
     await admin.page.waitForSelector('[role=dialog]')
-    await click(admin.page, '確認作廢')
-    await waitText(admin.page, '請填寫原因')
-    check('E5 直接作廢必須填寫原因（空白被擋下）', (await admin.page.$('[role=dialog]')) !== null)
-    await setValue(admin.page, '#void-reason', '測試後清理，開放重新打卡')
-    await click(admin.page, '確認作廢')
-    await waitText(admin.page, '已作廢 E2E 員工 A 今日的紀錄')
 
+    // 另一個管理員工作階段：作廢今日紀錄
+    const admin2 = await adminLogin(ctxAdmin2, DESKTOP)
+    await admin2.page.click('a[href="#/admin/attendance"]')
+    await admin2.page.waitForSelector('#admin-employee')
+    await selectByText(admin2.page, '#admin-employee', no('A'))
+    await click(admin2.page, '查詢')
+    await admin2.page.waitForSelector('[data-testid=admin-records-table]')
+    await click(admin2.page, '作廢今日紀錄')
+    await admin2.page.waitForSelector('[role=dialog]')
+    await click(admin2.page, '確認作廢')
+    await waitText(admin2.page, '請填寫原因')
+    check('E5 直接作廢必須填寫原因（空白被擋下）', (await admin2.page.$('[role=dialog]')) !== null)
+    await setValue(admin2.page, '#void-reason', '測試後清理，開放重新打卡')
+    await click(admin2.page, '確認作廢')
+    await waitText(admin2.page, '已作廢 E2E 員工 A 今日的紀錄')
+
+    // 員工重新上下班 → 新的一筆，版本號碼和舊紀錄相同
     const a = await newPage(ctxA, { viewport: DESKTOP })
     await loginAs(a.page, stack.users.a.username, stack.users.a.password, base)
     await waitStatus(a.page, '尚未上班')
     check('E5 員工登入後今日為「尚未上班」，可再打卡', !(await isDisabled(a.page, '上班打卡')))
-    await admin.page.waitForSelector('[data-testid=history-list]')
-    check('E5 管理員歷程列出「管理員作廢」與原因', (await admin.page.$eval('[data-testid=history-list]', (el) => el.textContent)).includes('測試後清理'))
-    await assertNoUnhandled('E5', [a.tracker, admin.tracker])
+    await click(a.page, '上班打卡')
+    await waitStatus(a.page, '工作中')
+    await click(a.page, '下班打卡')
+    await waitStatus(a.page, '今日已完成')
+    const replacement = await a.page.evaluate(async () => (await fetch('/api/attendance/me/today')).json())
+    check('E5 新紀錄與舊紀錄 ID 不同、版本相同（只比版本會誤判）', String(replacement.recordId) !== oldRow.id && String(replacement.version) === oldRow.version,
+      JSON.stringify({ oldRow, replacement }))
+
+    // 第一個管理員送出舊對話框
+    await admin.page.bringToFront()
+    await setValue(admin.page, '#direct-in', '08:00:00')
+    await setValue(admin.page, '#direct-reason', '舊對話框')
+    await click(admin.page, '確認更正')
+    await waitText(admin.page, '這筆出勤資料已被其他操作更新')
+    check('E5 舊對話框送出 → 409「已被其他操作更新」，對話框仍開著', (await admin.page.$('[role=dialog]')) !== null)
+    await click(admin.page, '取消')
+    const replacementAfter = await a.page.evaluate(async () => (await fetch('/api/attendance/me/today')).json())
+    check('E5 新紀錄完全沒被改（時間、版本相同）', JSON.stringify(replacementAfter) === JSON.stringify(replacement))
+
+    await admin2.page.bringToFront()
+    await admin2.page.waitForSelector('[data-testid=history-list]')
+    check('E5 管理員歷程列出「管理員作廢」與原因', (await admin2.page.$eval('[data-testid=history-list]', (el) => el.textContent)).includes('測試後清理'))
+    await assertNoUnhandled('E5', [a.tracker, admin.tracker, admin2.tracker])
     await ctxAdmin.close()
+    await ctxAdmin2.close()
     await ctxA.close()
   }
 
@@ -334,7 +438,7 @@ try {
     await c.page.waitForSelector('#range-from')
     check('E6 手機：出勤頁沒有橫向捲動', await noHorizontalOverflow(c.page))
     await c.page.waitForSelector('[data-testid=my-requests]') // 等非同步內容載入完成，避免版面位移讓點擊落在別處
-    const openForm = await button(c.page, '申請更正／補登')
+    const openForm = await button(c.page, '申請更正／補登時間')
     await openForm.scrollIntoView()
     await openForm.tap()
     await c.page.waitForSelector('#corr-date')
@@ -418,6 +522,62 @@ try {
     check('E7 前端偵測到台北日期已變 → 自動重新查詢（不會停在昨天的狀態）', todayRequests > beforeShift, `${beforeShift} → ${todayRequests}`)
     await assertNoUnhandled('E7', [c.tracker])
     await ctx.close()
+  }
+  // ================= E8：R2——相同條件再按一次「查詢」也會重新取得紀錄與歷程 =================
+  {
+    const ctxAdmin = await browser.createBrowserContext()
+    const ctxC = await browser.createBrowserContext()
+    const admin = await adminLogin(ctxAdmin, DESKTOP)
+    let recordFetches = 0
+    let historyFetches = 0
+    admin.page.on('request', (r) => {
+      const p = new URL(r.url()).pathname
+      if (p === '/api/admin/attendance/records') recordFetches++
+      if (p === '/api/admin/attendance/history') historyFetches++
+    })
+    await admin.page.click('a[href="#/admin/attendance"]')
+    await admin.page.waitForSelector('#admin-employee')
+    await selectByText(admin.page, '#admin-employee', no('C'))
+    await setValue(admin.page, '#admin-from', taipeiDate(0))
+    await setValue(admin.page, '#admin-to', taipeiDate(0))
+    await click(admin.page, '查詢')
+    await waitText(admin.page, '這段期間沒有出勤紀錄')
+    await admin.page.waitForFunction(() => document.querySelector('[data-testid=history-list]') || document.body.innerText.includes('沒有歷程紀錄'))
+    const fetchesBefore = { recordFetches, historyFetches }
+    const reasonsBefore = await admin.page.evaluate(() => document.body.innerText.includes('R2 驗證用的申請'))
+    check('E8 第一次查詢：今天沒有紀錄、也沒有這次的申請歷程', !reasonsBefore && (await admin.page.$('[data-testid=admin-records-table]')) === null)
+
+    // 另一個工作階段：員工 C 上班打卡並提出整組作廢申請（新增出勤＋新增歷程）
+    const c = await newPage(ctxC, { viewport: DESKTOP })
+    await loginAs(c.page, stack.users.c.username, stack.users.c.password, base)
+    await waitStatus(c.page, '尚未上班')
+    await click(c.page, '上班打卡')
+    await waitStatus(c.page, '工作中')
+    await click(c.page, '申請整組作廢並重新打卡')
+    await setValue(c.page, '#reason-text', 'R2 驗證用的申請')
+    await click(c.page, '送出申請')
+    await c.page.waitForSelector('[data-testid=today-pending]')
+
+    // 管理員不改任何條件，再按一次「查詢」
+    await admin.page.bringToFront()
+    check('E8 條件不變、尚未重新查詢前畫面仍是舊資料（員工出勤區沒有自動輪詢）', (await admin.page.$('[data-testid=admin-records-table]')) === null)
+    await click(admin.page, '查詢')
+    await admin.page.waitForSelector('[data-testid=admin-records-table]')
+    await admin.page.waitForFunction(() => document.querySelector('[data-testid=history-list]')?.textContent.includes('R2 驗證用的申請'))
+    const rowStatuses = await admin.page.$$eval('[data-testid=admin-records-table] tbody tr', (trs) => trs.map((r) => r.dataset.status))
+    check('E8 相同條件再查詢：紀錄更新為今日「工作中」', rowStatuses.length === 1 && rowStatuses[0] === 'WORKING', rowStatuses.join(','))
+    check('E8 相同條件再查詢：歷程出現剛提出的申請（整組作廢並重新打卡）',
+      (await admin.page.$eval('[data-testid=history-list]', (el) => el.textContent)).includes('整組作廢並重新打卡'))
+    check('E8 第二次查詢確實重新向後端取得紀錄與歷程', recordFetches > fetchesBefore.recordFetches && historyFetches > fetchesBefore.historyFetches,
+      JSON.stringify({ fetchesBefore, recordFetches, historyFetches }))
+
+    // 清理：撤回這筆待審申請（只動本次專用帳號）
+    await c.page.bringToFront()
+    await click(c.page, '撤回申請')
+    await c.page.waitForFunction(() => !document.querySelector('[data-testid=today-pending]'))
+    await assertNoUnhandled('E8', [admin.tracker, c.tracker])
+    await ctxAdmin.close()
+    await ctxC.close()
   }
 } catch (error) {
   check('腳本執行未中斷', false, String(error?.stack ?? error))

@@ -20,13 +20,21 @@ public final class AttendanceDtos {
 
     // ---------------- 請求 ----------------
 
-    /** 員工提出申請。RESET_TODAY 只需要 type 與 reason；CORRECT_TIME 另需 workDate 與 clockInTime。 */
+    /**
+     * 員工提出申請。RESET_TODAY 需要 type、reason 與快照；CORRECT_TIME 另需 workDate 與 clockInTime。
+     *
+     * <p>expectedAttendanceId／expectedVersion 是「表單讀到的那筆有效紀錄」的快照，兩者同時帶或同時不帶：
+     * 都帶＝該日的有效紀錄必須正是這個 ID 與版本；都不帶＝表單看到的是「這一天沒有紀錄」。
+     * 不一致就拒絕（409 RECORD_CHANGED），避免用過期的畫面提出申請。
+     */
     public record CreateRequest(
             @NotNull AttendanceRequestType type,
             @NotBlank @Size(max = 500) String reason,
             LocalDate workDate,
             LocalTime clockInTime,
-            LocalTime clockOutTime) {
+            LocalTime clockOutTime,
+            Long expectedAttendanceId,
+            Long expectedVersion) {
     }
 
     public record ApproveRequest(@Size(max = 500) String comment) {
@@ -36,10 +44,18 @@ public final class AttendanceDtos {
     public record RejectRequest(@NotBlank @Size(max = 500) String reason) {
     }
 
-    /** 管理員直接更正。expectedVersion 省略＝建立（該日必須沒有有效紀錄）。 */
+    /**
+     * 管理員直接更正。兩種模式必須明確區分：
+     * <ul>
+     *   <li>更正既有紀錄：attendanceId＋expectedVersion 都要帶（表單當時看到的那一筆與它的版本）；</li>
+     *   <li>補登新紀錄：兩者都不帶（該日必須沒有有效紀錄）。</li>
+     * </ul>
+     * 只帶其中一個是不完整的請求（400）。後端不會把前端指定的 ID 換成「後來查到的另一筆」。
+     */
     public record DirectCorrectionRequest(
             @NotNull Long employeeId,
             @NotNull LocalDate workDate,
+            Long attendanceId,
             Long expectedVersion,
             @NotNull LocalTime clockInTime,
             LocalTime clockOutTime,
@@ -74,6 +90,8 @@ public final class AttendanceDtos {
     public record AttendanceRequestResponse(
             Long id,
             AttendanceRequestType type,
+            /* 給人看的類別：RESET_TODAY（整組作廢重打）、REVOKE_CLOCK_OUT（撤銷下班）、CORRECT_TIME（更正／補登） */
+            String kind,
             AttendanceRequestStatus status,
             LocalDate workDate,
             String reason,
@@ -97,6 +115,8 @@ public final class AttendanceDtos {
             LocalDate workDate,
             Long requestId,
             AttendanceRequestType requestType,
+            /* 與申請相關的操作：同 AttendanceRequestResponse.kind；直接更正／作廢為 null */
+            String requestKind,
             String reason,
             String actorName,
             String employeeName,

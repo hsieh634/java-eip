@@ -67,3 +67,14 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 測試：後端 94 → 151；E2E：dev 環境 18＋23＋10，隔離堆疊 37＋52。
 - 狀態：已驗證（作者自測）；**尚未經對話助理審查**。
 - 規格：`docs/renewflow/t03-1/`；學習文件：`docs/learning/T03-1-attendance-corrections.md`。
+
+## 第 5 輪：T03.1 審查修正（R1–R3）＋打卡申請操作調整
+
+- 審查基準：`f16b5f0e5c6d9a6dc2d3ac9aa5a844d032bc4763`。
+- 修正 commit：標題為 `fix: T03.1 review round 1 ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件、工具、映像檔：**無**。新增 migration：**無**（V1–V3 未修改；V3 已有所需欄位）。
+- R1：直接更正同時比對紀錄 ID＋版本。R2：相同條件再查詢會重新取得。R3：E2E 保護測試只清理本次建立的臨時庫（`TemporaryDatabases`）。
+- 新操作：申請撤銷下班打卡、申請整組作廢並重新打卡、申請更正／補登時間；申請送出時核對表單快照；回應新增 `kind`／`requestKind`、今日回應新增 `recordId`／`version`。
+- 測試：後端 151 → 166；E2E：dev 環境 18＋23＋10，隔離堆疊 37＋74。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t03-1/review-round-1.md`；學習文件：`docs/learning/T03-1-review-fixes.md`。

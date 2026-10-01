@@ -179,6 +179,7 @@ class AttendanceCorrectionConcurrencyIntegrationTest extends CorrectionsTestBase
         punch(aliceB, CLOCK_IN, "2026-10-01T01:00:00Z");
         clock.set(utc("2026-10-01T10:00:00Z"));
         long version = activeVersion(alice, "2026-10-01");
+        long recordId = activeId(alice, "2026-10-01");
         List<TestBrowser> admins = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             admins.add(loginAs("carol"));
@@ -189,7 +190,7 @@ class AttendanceCorrectionConcurrencyIntegrationTest extends CorrectionsTestBase
         for (TestBrowser admin : admins) {
             String minute = String.format("08:%02d:00", 10 + n++); // 每個請求希望的時間不同
             String body = json("employeeId", String.valueOf(alice.getId()), "workDate", str("2026-10-01"),
-                    "expectedVersion", String.valueOf(version), "clockInTime", str(minute), "clockOutTime", "null", "reason", str("並行更正"));
+                    "attendanceId", String.valueOf(recordId), "expectedVersion", String.valueOf(version), "clockInTime", str(minute), "clockOutTime", "null", "reason", str("並行更正"));
             tasks.add(() -> admin.post(ADMIN + "/records/correct", body));
         }
 

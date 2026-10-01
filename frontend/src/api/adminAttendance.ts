@@ -15,7 +15,11 @@ export interface AdminRecords {
 export interface DirectCorrectionBody {
   employeeId: number
   workDate: string
-  /** 省略（null）＝建立；有值＝更正既有紀錄（版本不符會被拒絕） */
+  /**
+   * 兩者皆 null＝建立（補登）；兩者皆有值＝更正「這一筆」紀錄。
+   * 後端同時比對 ID 與版本：紀錄被作廢、換成另一筆（即使版本號碼相同）或被改過，都會以 409 RECORD_CHANGED 拒絕。
+   */
+  attendanceId: number | null
   expectedVersion: number | null
   clockInTime: string
   clockOutTime: string | null
