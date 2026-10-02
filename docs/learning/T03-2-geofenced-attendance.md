@@ -143,6 +143,11 @@ auditLog.record(before, after, reason, actor.getEmployeeId(), now);       // 同
 
 ### 5.5 前端：過期 callback 與重複點擊（`useTodayAttendance`）
 
+> **第 1 輪複審修正背景（請一併閱讀 [`T03-2-review-fixes.md`](T03-2-review-fixes.md)）**：本節描述的是 T03.2 初版的寫法。複審發現初版的取消防護不完整——
+> （R1）只在「定位結果回來之後」檢查，等待定位設定期間切頁，舊操作仍可能定位或送出打卡；
+> （R2）今日狀態的舊回應可能覆蓋新回應。初版 E2E G5 只驗證了「定位中切頁」這一種時機，**不能**代表「切頁後一定不送出」已完整驗證。
+> 現行程式已改為「掛載有效期間（Lifetime）＋操作識別＋查詢序號」，下方片段保留作為對照。
+
 ```ts
 const perform = useCallback(async (action: Action) => {
   if (inFlight.current) return              // ref：同一個事件迴圈內的第二次點擊也擋得住
@@ -254,7 +259,7 @@ insert into attendance_clock_event (accepted_at, accuracy_meters, action, attend
 
 **Q6. DTO Validation 與業務驗證差在哪？** Bean Validation 處理與情境無關的格式與範圍（緯度 −90～90）；業務驗證依情境（這次是否需要定位、是否啟用、版本是否相符）。本專案兩層都檢查有限數值：第一層擋下大部分，第二層防止日後有人移除註解。
 
-**Q7. 前端如何避免過期 callback？** 操作在按下時固定（閉包）；`mounted` ref 判斷是否已卸載；`latestState` ref 重新確認操作仍成立；`inFlight` ref 擋連按。後端仍是最終裁決。
+**Q7. 前端如何避免過期 callback？** 操作在按下時固定；每次掛載一個永不復活的 `Lifetime`、每次打卡一個 `Operation`，在每個 `await` 之後與每個副作用之前確認仍有效；今日狀態只採用最後發出的查詢；`latestState` 在採用時同步更新。後端仍是最終裁決。（初版只用 `mounted` 布林值且只在定位後檢查，見第 1 輪複審修正。）
 
 **Q8. 測試模擬能證明什麼、不能證明什麼？** 能證明程式對「成功、拒絕、逾時、不可用、精度、範圍外、延遲」的處理正確，且透過真正的 Geolocation API 可以走通。不能證明真實裝置的定位品質、HTTPS 環境、或任何防作弊效果。
 

@@ -90,3 +90,13 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 開發庫已套用 V4：既有員工、出勤、申請、歷程逐列相同；定位限制保持關閉、公司中心未設定。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t03-2/`；學習文件：`docs/learning/T03-2-geofenced-attendance.md`。
+
+## 第 7 輪：T03.2 複審修正（R1、R2）
+
+- 審查基準：`2d6f33359edb8198a450a98051e3407592f72d1d`。
+- 修正 commit：標題為 `fix: T03.2 review round 1 ...` 的 commit，完整 SHA 見交付報告。
+- 只修改前端 `useTodayAttendance`（打卡操作生命週期、今日狀態查詢序號）；後端、API、migration 未修改；新增相依套件：**無**。
+- 新增 E2E `geofence-races.mjs`（`npm run e2e:races`，隔離堆疊），抽出共用假定位 `e2e/geo.mjs`。修正前 11/22 失敗、修正後 22/22。
+- 測試：E2E 隔離堆疊 37＋74＋59＋22；dev 環境 18＋23＋10。後端 209 沿用上一輪證據（本次未重跑，因後端未修改）。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t03-2/review-round-1.md`；學習文件：`docs/learning/T03-2-review-fixes.md`。

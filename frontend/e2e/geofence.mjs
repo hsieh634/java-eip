@@ -9,6 +9,7 @@
 // 執行：cd frontend; npm run e2e:geofence
 import path from 'node:path'
 import { OUT, createRunner, launchBrowser, loginAs } from './helpers.mjs'
+import { CENTER, geo, geoState, installFakeGeolocation, northOf } from './geo.mjs'
 import { startIsolatedStack } from './isolated-stack.mjs'
 import { bodyText, button, click, hasButton, isDisabled, newPage, noHorizontalOverflow, setValue, simulateReturnToWindow, todayStatus, waitStatus, waitText } from './ui.mjs'
 
@@ -16,9 +17,6 @@ const { check, finish } = createRunner()
 let stack
 let browser
 
-const CENTER = { latitude: 25.0, longitude: 121.5 }
-const METERS_PER_DEGREE = (6_371_008.8 * Math.PI) / 180
-const northOf = (meters) => ({ latitude: CENTER.latitude + meters / METERS_PER_DEGREE, longitude: CENTER.longitude })
 const DESKTOP = { width: 1200, height: 900 }
 const MOBILE = { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
 
@@ -27,36 +25,6 @@ async function assertNoUnhandled(name, trackers) {
   const errors = trackers.flatMap((t) => t.pageErrors)
   check(`${name}：沒有未處理的 Promise 拒絕與 JS 例外`, rejections.length === 0 && errors.length === 0, [...rejections, ...errors].join(' | '))
 }
-
-/** 在頁面載入前注入假的 navigator.geolocation，由 window.__geo 控制。 */
-async function installFakeGeolocation(page) {
-  await page.evaluateOnNewDocument(() => {
-    const ctl = { mode: 'success', latitude: 0, longitude: 0, accuracy: 10, delayMs: 0, calls: 0, watchCalls: 0, options: null, insecure: false }
-    globalThis.__geo = ctl
-    const fake = {
-      getCurrentPosition(success, error, options) {
-        ctl.calls++
-        ctl.options = options
-        const mode = ctl.mode
-        const position = { coords: { latitude: ctl.latitude, longitude: ctl.longitude, accuracy: ctl.accuracy }, timestamp: Date.now() }
-        setTimeout(() => {
-          if (mode === 'success') success(position)
-          else error({ code: { denied: 1, unavailable: 2, timeout: 3 }[mode], message: mode })
-        }, ctl.delayMs)
-      },
-      watchPosition() {
-        ctl.watchCalls++
-        return 0
-      },
-      clearWatch() {},
-    }
-    Object.defineProperty(Navigator.prototype, 'geolocation', { configurable: true, get: () => (ctl.mode === 'unsupported' ? undefined : fake) })
-    Object.defineProperty(window, 'isSecureContext', { configurable: true, get: () => !ctl.insecure })
-  })
-}
-
-const geo = (page, patch) => page.evaluate((p) => Object.assign(globalThis.__geo, p), patch)
-const geoState = (page) => page.evaluate(() => ({ ...globalThis.__geo }))
 
 /** 記錄打卡 POST 的次數。 */
 function countClockRequests(page) {
