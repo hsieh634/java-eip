@@ -1,5 +1,7 @@
 package com.renewflow.eip.attendance;
 
+import com.renewflow.eip.geofence.GeofenceDtos.LocationPolicyResponse;
+
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -8,6 +10,7 @@ import java.time.LocalDate;
  * unfinishedBefore：今日之前最近一筆未下班的業務日期，沒有則為 null。
  * recordId／version：今日有效紀錄的識別與版本（沒有紀錄則為 null）。員工提出申請時把它們當作「我看到的快照」送回，
  * 後端據此拒絕以過期畫面提出的申請。
+ * locationPolicy：本次上班／下班是否需要定位與允許半徑（T03.2；不含公司中心座標）。實際打卡時仍以後端交易內的設定為準。
  */
 public record TodayAttendanceResponse(
         AttendanceStatus status,
@@ -17,5 +20,6 @@ public record TodayAttendanceResponse(
         Instant clockOutAt,
         LocalDate unfinishedBefore,
         Long recordId,
-        Long version) {
+        Long version,
+        LocationPolicyResponse locationPolicy) {
 }

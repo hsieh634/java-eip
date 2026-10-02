@@ -67,6 +67,10 @@ T03 起會有**寫入**型 API（打卡等）。若只依賴 Session 內的快�
 
 `/api/admin/**` 需要 `ROLE_ADMIN`（URL 規則＋Service 內再檢查）；`ActiveAccountFilter` 確保角色是最新的；管理員不可審核自己的申請、不可直接更正自己的出勤。詳見 [`t03-1/05-security-design.md`](t03-1/05-security-design.md)。
 
+## T03.2：定位打卡
+
+`/api/admin/geofence` 沿用 ADMIN 規則（URL＋Service＋`ActiveAccountFilter`）；admin 與 developer 權限相同、沒有定位繞過。距離與範圍只由後端判斷，前端只送原始定位資料。瀏覽器定位可被模擬或偽造，本功能**不能完全防止代打卡**；`capturedAt` 是用戶端資訊，不能證明位置真實或防止重播。詳見 [`t03-2/06-security-design.md`](t03-2/06-security-design.md)。
+
 ## 已知限制
 
 - 無登入失敗鎖定、無密碼政策、無改密碼流程。

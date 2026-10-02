@@ -1,7 +1,7 @@
 # TeamPortal（企業員工入口平台）
 
 Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlow Engineering Method v2**（開發方法名稱）建立。
-**目前進度：T01、T02、T03、T03.1**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限）。T04 以後尚未開始。
+**目前進度：T01、T02、T03、T03.1、T03.2**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定）。T04 以後尚未開始。
 
 > 命名說明：產品顯示名稱是 TeamPortal；Repository（`java-eip`）、資料夾、Java package（`com.renewflow.eip`）、資料庫、容器與環境變數名稱沿用既有設定。
 
@@ -10,7 +10,8 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | 規格（需求、架構、資料、API、安全、本階段 proposal／design／specification／tasks） | [docs/renewflow/](docs/renewflow/) |
 | T03 打卡規格 | [docs/renewflow/t03/](docs/renewflow/t03/) |
 | T03.1 更正／重新打卡／管理權限規格 | [docs/renewflow/t03-1/](docs/renewflow/t03-1/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t03-1/review-round-1.md)） |
-| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T03-1-review-fixes.md](docs/learning/T03-1-review-fixes.md)；T03.1 主文件：[T03-1-attendance-corrections.md](docs/learning/T03-1-attendance-corrections.md)） |
+| T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
+| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T03-2-geofenced-attendance.md](docs/learning/T03-2-geofenced-attendance.md)） |
 
 ## 1. 環境需求（Windows 11）
 
@@ -110,7 +111,7 @@ npm run dev
 | `RENEWFLOW_DEV_DEVELOPER_PASSWORD` | `developer`（ADMIN）的**獨立**密碼；僅 dev profile 讀取 | 空＝不建立 developer（沒有預設密碼） |
 | `RENEWFLOW_DEV_SEED_RESET` | 設為 `true` 並重啟一次：只更新開發帳號的密碼雜湊（保留 ID 與出勤資料）；用完改回 `false` | `false` |
 
-隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
+隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
 
 後端由 `backend/` 目錄啟動時會自動讀取上一層的 `.env`；也可直接設定同名的真正環境變數。
 
@@ -135,9 +136,9 @@ cd frontend
 npm run e2e
 ```
 
-`npm run e2e` 依序執行五支腳本，也可單獨執行：
+`npm run e2e` 依序執行六支腳本，也可單獨執行：
 - `npm run e2e:smoke`（基本流程）、`npm run e2e:logout`（登出失敗情境）、`npm run e2e:password`（密碼位元組提示）：對你正在跑的 dev 環境（5173／8080）執行，只登入／登出開發帳號、讀取畫面，**不會打卡、不會提出申請**。
-- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫。
+- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
 
 腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖與隔離堆疊日誌輸出在 `frontend/e2e/output/`（不進版控）。
 
@@ -190,6 +191,8 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 
 本機學習規則（不代表任何公司制度）：固定白班、台北時區、每人每日最多一筆**有效**出勤；不支援跨日班、輪班、未來時間。誤按或漏打需透過申請（或管理員直接更正），且都會留下歷程；原始紀錄不會被硬刪。
 
+定位打卡（T03.2）依瀏覽器提供的位置判斷，位置可被模擬或偽造，**不能完全防止代打卡**；手機用區網 HTTP 位址開網站時瀏覽器通常不允許定位（需要 HTTPS），本階段沒有 HTTPS 與手機實機驗證。
+
 沒有登入失敗鎖定、改密碼、員工管理、多層審核、通知；Session 存在記憶體（重啟後端需重新登入）；正式環境的同源部署與 HTTPS 設定尚未處理（只定義了 Cookie `Secure` 預設為 true）。詳見安全設計文件。
 
 ## 9. 出勤更正操作步驟（T03.1）
@@ -228,3 +231,24 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 
 **其他**
 - 管理員直接更正：在查詢結果按 **更正時間**、**新增（補登）紀錄** 或 **作廢今日紀錄**，必填原因並在確認視窗確認；不能對自己操作。對話框開著期間，若那筆紀錄被作廢、換成新的一筆或被改過，送出會被拒絕（「這筆出勤資料已被其他操作更新」），請重新查詢。
+
+## 10. 定位打卡操作步驟（T03.2）
+
+> 開發環境的定位限制**預設關閉**、公司中心**未設定**。系統不會替你猜公司地址，也不會自動啟用。
+
+**A. 管理員（`developer` 或 `admin`）設定**
+1. 登入後點左側 **定位打卡設定**（只有管理員看得到）。
+2. 填寫公司中心的 **緯度**、**經度**（十進位度數，例如 25.033964、121.564468；可在地圖服務對公司位置按右鍵取得）、**允許半徑**（10～5000 公尺，預設 100）、**適用操作**（只限制上班／只限制下班／上下班都限制）。
+3. 勾選 **啟用定位限制**（沒有公司中心時不能啟用），填寫 **修改原因**，按 **儲存設定**。
+4. 確認畫面列出修改前後的差異，按 **確認儲存**。頁面顯示最近修改人與時間，下方「設定歷程」列出每次修改的前後值與原因。
+5. 兩位管理員同時修改時，後儲存的人會看到「已被其他管理員更新，沒有儲存」，按 **重新載入最新設定** 後再改。
+6. 要停用：取消勾選、填原因、儲存。管理員自己的打卡也受限制。
+
+**B. 員工打卡**
+1. 「今日打卡」卡片會事先說明這次打卡是否需要定位、允許半徑與精度上限（50 公尺）。
+2. 不需要定位時，打卡流程與以前相同，不會詢問位置。
+3. 需要定位時，按下按鈕後瀏覽器會詢問位置權限；按鈕依序顯示「確認定位設定中…」「正在取得位置…」「正在送出打卡…」。
+4. 被拒絕時會說明原因並提供 **重試**：拒絕權限、逾時、無法取得、不支援、非安全來源、精度不足、或不在範圍內（顯示距離與允許半徑）。
+5. 人在範圍外時仍可提出「撤銷下班」「整組作廢」「更正／補登」申請，由管理員審核。
+
+**C. 實機限制**：電腦的 `http://localhost:5173` 是安全來源，瀏覽器允許定位；桌機通常只有 Wi-Fi／IP 定位，精度可能超過 50 公尺而被拒絕。手機用 `http://192.168.x.x:5173` 開網站**不是**安全來源，瀏覽器會拒絕定位——需要 HTTPS，本階段尚未處理（要做時會先說明方案、費用與影響）。

@@ -1,13 +1,18 @@
-/** 後端錯誤回應 { code, message } 對應的例外。status 為 0 代表根本連不上伺服器。 */
+/**
+ * 後端錯誤回應 { code, message } 對應的例外。status 為 0 代表根本連不上伺服器。
+ * details：錯誤本文的其他欄位（例如 OUTSIDE_GEOFENCE 的 distanceMeters／radiusMeters）。
+ */
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
+  readonly details: Readonly<Record<string, unknown>>
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details: Record<string, unknown> = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.details = details
   }
 }
 
@@ -58,19 +63,21 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   if (!response.ok) {
     let code = 'UNKNOWN'
+    let details: Record<string, unknown> = {}
     // 502/503/504 通常是代理層（開發時的 Vite）連不到後端，此時回應不是後端的 JSON
     let message =
       response.status >= 502 && response.status <= 504
         ? '伺服器暫時無法使用，請確認後端已啟動'
         : `請求失敗（HTTP ${response.status}）`
     try {
-      const data = (await response.json()) as { code?: string; message?: string }
+      const data = (await response.json()) as { code?: string; message?: string } & Record<string, unknown>
       code = data.code ?? code
       message = data.message ?? message
+      details = data
     } catch {
       // 回應不是 JSON（例如代理層錯誤）：維持預設訊息
     }
-    throw new ApiError(response.status, code, message)
+    throw new ApiError(response.status, code, message, details)
   }
 
   if (response.status === 204) {

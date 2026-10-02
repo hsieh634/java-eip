@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import type { TodayAttendance } from '../api/attendance'
+import type { LocationPolicy, TodayAttendance } from '../api/attendance'
 import { cancelRequest, submitRequest } from '../api/attendanceRequests'
 import { RECORD_STATUS_LABEL, REQUEST_KIND_LABEL } from '../attendance/labels'
 import { useMyRequests } from '../attendance/useMyRequests'
-import { useTodayAttendance } from '../attendance/useTodayAttendance'
+import { useTodayAttendance, type Action, type Phase } from '../attendance/useTodayAttendance'
 import { useApiErrorMessage } from '../auth/useApiErrorMessage'
 import { useAuth } from '../auth/useAuth'
 import { formatTime, formatWorkDate, toPreciseTimeValue } from '../lib/time'
@@ -23,7 +23,7 @@ type TodayForm = { kind: 'revoke' | 'reset'; seen: TodayAttendance }
 export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => void }>) {
   const messageOf = useApiErrorMessage()
   const auth = useAuth()
-  const { state, busy, notice, retry, reload, clockIn, clockOut } = useTodayAttendance(onChanged)
+  const { state, busy, phase, notice, retry, reload, perform } = useTodayAttendance(onChanged)
   const requests = useMyRequests(() => {
     void reload() // 申請有結果（被核准或退回）→ 重新查詢今日狀態
     onChanged?.()
@@ -123,24 +123,7 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
             </p>
           )}
 
-          <div className="actions">
-            <button
-              type="button"
-              className="btn btn--primary btn--large"
-              onClick={() => void clockIn()}
-              disabled={busy !== null || data.status !== 'NOT_STARTED'}
-            >
-              {busy === 'in' ? '打卡中…' : '上班打卡'}
-            </button>
-            <button
-              type="button"
-              className="btn btn--large"
-              onClick={() => void clockOut()}
-              disabled={busy !== null || data.status !== 'WORKING'}
-            >
-              {busy === 'out' ? '打卡中…' : '下班打卡'}
-            </button>
-          </div>
+          <ClockActions data={data} busy={busy} phase={phase} onClock={(action) => void perform(action)} />
 
           {pending && (
             <div className="banner banner--info" role="status" data-testid="today-pending" data-kind={pending.kind}>
@@ -185,9 +168,10 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
       )}
 
       {notice && (
-        <p className={notice.kind === 'success' ? 'notice notice--success' : 'notice notice--error'} role="status">
-          {notice.text}
-        </p>
+        <div className={notice.kind === 'success' ? 'notice notice--success' : 'notice notice--error'} role="status" data-testid="clock-notice">
+          <p>{notice.text}</p>
+          {notice.retry && <RetryButton action={notice.retry} disabled={busy !== null} onRetry={(action) => void perform(action)} />}
+        </div>
       )}
 
       <p className="muted small">
@@ -266,5 +250,58 @@ function ResetOutcome({ seen }: Readonly<{ seen: TodayAttendance }>) {
       {hasOut && <p className="small">如果只是誤按下班，請改用「申請撤銷下班打卡」，可以保留上班時間。</p>}
       <p className="muted small">整組作廢只適用於今日；過了今天（台北時間）就無法核准，請改用更正／補登時間。</p>
     </>
+  )
+}
+
+const ACTION_LABEL: Record<Action, string> = { in: '上班打卡', out: '下班打卡' }
+const PHASE_LABEL: Record<Phase, string> = { checking: '確認定位設定中…', locating: '正在取得位置…', submitting: '正在送出打卡…' }
+
+/** 上下班按鈕＋本次是否需要定位的說明。按鈕文字隨階段改變（確認設定 → 取得位置 → 送出打卡）。 */
+function ClockActions({ data, busy, phase, onClock }: Readonly<{ data: TodayAttendance; busy: Action | null; phase: Phase | null; onClock: (action: Action) => void }>) {
+  const label = (action: Action) => (busy === action && phase ? PHASE_LABEL[phase] : ACTION_LABEL[action])
+  return (
+    <>
+      <div className="actions">
+        <button type="button" className="btn btn--primary btn--large" onClick={() => onClock('in')} disabled={busy !== null || data.status !== 'NOT_STARTED'}>
+          {label('in')}
+        </button>
+        <button type="button" className="btn btn--large" onClick={() => onClock('out')} disabled={busy !== null || data.status !== 'WORKING'}>
+          {label('out')}
+        </button>
+      </div>
+      {busy && phase && (
+        <p className="muted small" role="status" aria-live="polite" data-testid="clock-phase" data-phase={phase}>
+          {PHASE_LABEL[phase]}
+        </p>
+      )}
+      <LocationPolicyNote policy={data.locationPolicy} />
+    </>
+  )
+}
+
+/** 事先告訴使用者：這次上班／下班是否需要定位、允許半徑與精度上限（數值來自後端）。 */
+function LocationPolicyNote({ policy }: Readonly<{ policy: LocationPolicy }>) {
+  if (!policy.enabled || (!policy.clockInRequired && !policy.clockOutRequired)) {
+    return (
+      <p className="muted small" data-testid="location-policy" data-required="none">
+        定位限制未啟用：打卡不需要定位。
+      </p>
+    )
+  }
+  const which = [policy.clockInRequired && '上班', policy.clockOutRequired && '下班'].filter(Boolean).join('、')
+  return (
+    <p className="banner banner--info small" data-testid="location-policy" data-required={`${policy.clockInRequired ? 'in' : ''}${policy.clockOutRequired ? 'out' : ''}`}>
+      {which}打卡需要定位：按下按鈕後瀏覽器會詢問位置，需在公司 {policy.radiusMeters} 公尺範圍內、定位精度 {policy.maxAccuracyMeters} 公尺以內。
+      {!policy.clockInRequired && '上班打卡不需要定位。'}
+      {!policy.clockOutRequired && '下班打卡不需要定位。'}
+    </p>
+  )
+}
+
+function RetryButton({ action, disabled, onRetry }: Readonly<{ action: Action; disabled: boolean; onRetry: (action: Action) => void }>) {
+  return (
+    <button type="button" className="btn btn--small" onClick={() => onRetry(action)} disabled={disabled}>
+      重試{ACTION_LABEL[action]}
+    </button>
   )
 }

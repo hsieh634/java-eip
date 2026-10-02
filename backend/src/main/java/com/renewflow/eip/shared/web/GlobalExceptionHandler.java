@@ -6,6 +6,8 @@ import com.renewflow.eip.attendance.AttendanceNotFoundException;
 import com.renewflow.eip.attendance.AttendanceRuleException;
 import com.renewflow.eip.attendance.InvalidDateRangeException;
 import com.renewflow.eip.attendance.InvalidRequestException;
+import com.renewflow.eip.geofence.GeofenceException;
+import com.renewflow.eip.geofence.OutsideGeofenceException;
 import com.renewflow.eip.identity.AuthenticationUnavailableException;
 import com.renewflow.eip.identity.InvalidCredentialsException;
 import com.renewflow.eip.identity.UnauthenticatedException;
@@ -78,6 +80,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AttendanceRuleException.class)
     ResponseEntity<ApiError> onAttendanceRule(AttendanceRuleException e) {
         return build(HttpStatus.CONFLICT, e.getRule().name(), e.getMessage());
+    }
+
+    /** 定位打卡／定位設定的預期拒絕（400／422／409）；狀態與 code 由例外指定。 */
+    @ExceptionHandler(GeofenceException.class)
+    ResponseEntity<ApiError> onGeofence(GeofenceException e) {
+        return build(e.getStatus(), e.getCode(), e.getMessage());
+    }
+
+    /** 403 OUTSIDE_GEOFENCE：另外附上後端計算的距離（未取整）與允許半徑。 */
+    @ExceptionHandler(OutsideGeofenceException.class)
+    ResponseEntity<OutsideGeofenceError> onOutsideGeofence(OutsideGeofenceException e) {
+        return ResponseEntity.status(e.getStatus())
+                .body(new OutsideGeofenceError(e.getCode(), e.getMessage(), e.getDistanceMeters(), e.getRadiusMeters()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

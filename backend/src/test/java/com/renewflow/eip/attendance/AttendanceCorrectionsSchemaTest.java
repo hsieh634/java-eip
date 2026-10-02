@@ -154,8 +154,9 @@ class AttendanceCorrectionsSchemaTest extends CorrectionsTestBase {
         String schema = "migration_probe_v3";
         Flyway v2Only = Flyway.configure().dataSource(dataSource).schemas(schema).createSchemas(true)
                 .cleanDisabled(false).locations("classpath:db/migration").target("2").load();
+        // 固定到 V3：本測試驗證的是「V2 → V3」這一步（V4 的升級另由 GeofenceSchemaTest 驗證）
         Flyway latest = Flyway.configure().dataSource(dataSource).schemas(schema)
-                .cleanDisabled(false).locations("classpath:db/migration").load();
+                .cleanDisabled(false).locations("classpath:db/migration").target("3").load();
         try {
             v2Only.clean();
             v2Only.migrate();

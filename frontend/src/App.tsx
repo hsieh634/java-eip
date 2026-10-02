@@ -3,12 +3,13 @@ import { AppShell } from './components/AppShell'
 import { useHashView } from './navigation/useHashView'
 import { AdminAttendancePage } from './pages/AdminAttendancePage'
 import { AttendancePage } from './pages/AttendancePage'
+import { GeofenceSettingsPage } from './pages/GeofenceSettingsPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 
 /**
  * 以登入狀態決定顯示哪個畫面；登入後以網址 hash（#/attendance）決定顯示哪一頁。
- * 目前只有兩頁，所以不引入路由套件；畫面變多再加 react-router。
+ * 頁面仍少，所以不引入路由套件；畫面變多再評估 react-router。
  * 注意：這只是「畫面」的切換，真正的保護在後端——就算有人強行顯示頁面，沒有有效 Session 也拿不到任何資料。
  */
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
         <AppShell user={state.user} view={view}>
           {view === 'attendance' && <AttendancePage />}
           {view === 'admin-attendance' && <AdminAttendancePage user={state.user} />}
+          {view === 'admin-geofence' && <GeofenceSettingsPage user={state.user} />}
           {view === 'home' && <HomePage user={state.user} />}
         </AppShell>
       )

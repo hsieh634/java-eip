@@ -68,6 +68,20 @@ public class TestBrowser {
         return send(builder.build());
     }
 
+    public Reply put(String path, String jsonBody) {
+        return putWithCsrf(path, jsonBody, cookie("XSRF-TOKEN"));
+    }
+
+    public Reply putWithCsrf(String path, String jsonBody, String csrfHeader) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + path))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(jsonBody == null ? "" : jsonBody));
+        if (csrfHeader != null) {
+            builder.header("X-XSRF-TOKEN", csrfHeader);
+        }
+        return send(builder.build());
+    }
+
     /** 直接指定 Cookie 標頭（用來模擬拿著舊 Session ID 的人）。 */
     public Reply getWithRawCookie(String path, String cookieHeader) {
         // 使用獨立的 client，避免 CookieManager 的內容混進來

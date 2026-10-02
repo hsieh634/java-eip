@@ -78,3 +78,15 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 測試：後端 151 → 166；E2E：dev 環境 18＋23＋10，隔離堆疊 37＋74。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t03-1/review-round-1.md`；學習文件：`docs/learning/T03-1-review-fixes.md`。
+
+## 第 6 輪：T03.2 公司範圍定位打卡與管理員設定
+
+- 審查基準（前一輪）：`4f14ee4e757fa43a0496c4a98d0371095342a0d5`。
+- T03.2 commit：標題為 `feat: T03.2 ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件、工具、映像檔、服務：**無**。新增 migration：`V4__geofence_attendance.sql`（只新增資料表；V1～V3 未修改）。
+- 指南第 2 節「GPS 暫不加入」標記為原始範圍，補充 T03.2 已授權（保留歷史脈絡）。
+- 既有測試調整（保留原驗收意義）：V2→V3 升級測試固定 `target("3")`；乾淨庫版本清單加入 4；打卡服務方法多一個定位參數（測試傳 `null`）。
+- 測試：後端 166 → 209；E2E：dev 環境 18＋23＋10，隔離堆疊 37＋74＋59（新增 `geofence.mjs`）。
+- 開發庫已套用 V4：既有員工、出勤、申請、歷程逐列相同；定位限制保持關閉、公司中心未設定。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t03-2/`；學習文件：`docs/learning/T03-2-geofenced-attendance.md`。

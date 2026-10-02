@@ -317,7 +317,7 @@ class AttendanceIntegrationTest extends AttendanceTestBase {
     @Test
     @DisplayName("A-29 外鍵錯誤（員工不存在）不會被偽裝成「重複上班」：丟出資料完整性例外，而不是 AttendanceRuleException")
     void foreignKeyViolationIsNotReportedAsDuplicate() {
-        assertThatThrownBy(() -> attendanceService.clockIn(-1L))
+        assertThatThrownBy(() -> attendanceService.clockIn(-1L, null))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .isNotInstanceOf(AttendanceRuleException.class);
         assertThat(attendanceRows()).isZero();

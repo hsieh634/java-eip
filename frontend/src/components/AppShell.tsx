@@ -103,6 +103,17 @@ export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser;
                 </a>
               </li>
             )}
+            {user.role === 'ADMIN' && (
+              <li>
+                <a
+                  href="#/admin/geofence"
+                  className={view === 'admin-geofence' ? 'nav-item nav-item--active' : 'nav-item'}
+                  aria-current={view === 'admin-geofence' ? 'page' : undefined}
+                >
+                  定位打卡設定
+                </a>
+              </li>
+            )}
             {PENDING_FEATURES.map((f) => (
               <li key={f.key}>
                 <button type="button" className="nav-item" disabled>

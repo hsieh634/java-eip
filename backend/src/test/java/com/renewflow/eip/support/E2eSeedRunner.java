@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -60,6 +61,8 @@ class E2eSeedRunner implements ApplicationRunner {
         if (runId.isBlank() || password.isBlank()) {
             throw new IllegalStateException("RENEWFLOW_E2E_RUN_ID／RENEWFLOW_E2E_PASSWORD 未設定");
         }
+        // 測試庫的定位設定恢復成預設值（關閉），避免上一次測試的設定影響本次 E2E
+        TestData.resetGeofence(new JdbcTemplate(dataSource));
         employeeRepository.save(new Employee("EA-" + runId, "e2e_a_" + runId, "E2E 員工 A", passwordEncoder.encode(password), Role.EMPLOYEE));
         employeeRepository.save(new Employee("EB-" + runId, "e2e_b_" + runId, "E2E 主管 B", passwordEncoder.encode(password), Role.MANAGER));
         employeeRepository.save(new Employee("EC-" + runId, "e2e_c_" + runId, "E2E 員工 C", passwordEncoder.encode(password), Role.EMPLOYEE));
