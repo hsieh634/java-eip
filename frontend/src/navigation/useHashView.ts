@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-export type View = 'home' | 'attendance' | 'admin-attendance' | 'admin-geofence'
+export type View = 'home' | 'attendance' | 'timesheets' | 'admin-attendance' | 'admin-geofence' | 'admin-projects'
 
 function subscribe(onChange: () => void) {
   window.addEventListener('hashchange', onChange)
@@ -16,5 +16,7 @@ export function useHashView(): View {
   if (hash === '#/attendance') return 'attendance'
   if (hash === '#/admin/attendance') return 'admin-attendance'
   if (hash === '#/admin/geofence') return 'admin-geofence'
+  if (hash === '#/timesheets') return 'timesheets'
+  if (hash === '#/admin/projects') return 'admin-projects'
   return 'home'
 }

@@ -100,3 +100,15 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 測試：E2E 隔離堆疊 37＋74＋59＋22；dev 環境 18＋23＋10。後端 209 沿用上一輪證據（本次未重跑，因後端未修改）。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t03-2/review-round-1.md`；學習文件：`docs/learning/T03-2-review-fixes.md`。
+
+## 第 8 輪：T04 最小專案管理與個人工時回報
+
+- 審查基準（前一輪）：`93048f35886d8bf6eb51cc7e1dccc310d52e6efc`。
+- T04 commit：標題為 `feat: T04 ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件、工具、映像檔、服務：**無**。新增 migration：`V5__projects_and_timesheets.sql`（只新增 `project`、`timesheet_entry`；V1～V4 未修改；不建立預設資料）。
+- 共用變更：`attendance.DateRange` 改為 public；新增 `shared/web/ApiException`；全域設定 `spring.jackson.deserialization.accept-float-as-int: false`（整數欄位收到小數改回 400，不再默默截斷——由 T04 測試發現）。
+- 既有測試調整（保留原驗收意義）：測試基底類別改為 public／protected 以便新套件共用；`TestData.reset` 加入新表；乾淨庫與 V1 升級的版本清單加入 5；smoke／打卡 E2E 的導覽檢查改為「工時回報已啟用、請假與設定仍未啟用」。
+- 測試：後端 209 → 239；E2E：dev 環境 18＋23＋10，隔離堆疊 37＋74＋59＋22＋49（新增 `timesheets.mjs`）。
+- 開發庫已套用 V5：員工、出勤、申請、歷程、定位設定與歷程、打卡事件逐列雜湊相同；定位維持關閉、中心未設定；專案與工時皆為 0 筆。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t04/`；學習文件：`docs/learning/T04-projects-and-timesheets.md`。

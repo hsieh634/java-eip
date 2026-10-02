@@ -9,7 +9,6 @@ const ROLE_LABEL: Record<Role, string> = {
 
 /** 尚未實作的卡片。不顯示任何假統計，只標示預計開放的階段。 */
 const PENDING_CARDS = [
-  { title: '本週工時', stage: 'T04' },
   { title: '待審核', stage: 'T05' },
 ] as const
 
@@ -34,6 +33,14 @@ export function HomePage({ user }: Readonly<{ user: CurrentUser }>) {
         </section>
 
         <TodayAttendanceCard />
+
+        <section className="card" aria-labelledby="card-timesheet">
+          <h2 id="card-timesheet">工時回報</h2>
+          <p className="muted">記錄自己每天在各專案的工作內容與時數，並查看每日與期間合計。</p>
+          <a className="btn" href="#/timesheets">
+            前往工時回報
+          </a>
+        </section>
 
         {PENDING_CARDS.map((c) => (
           <section key={c.title} className="card card--pending" aria-label={`${c.title}（尚未啟用）`}>

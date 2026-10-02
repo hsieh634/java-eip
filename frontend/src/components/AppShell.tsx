@@ -12,7 +12,6 @@ const ROLE_LABEL: Record<Role, string> = {
 
 /** 尚未實作的功能。只列出名稱與預計階段，不顯示任何假資料。 */
 const PENDING_FEATURES = [
-  { key: 'timesheet', label: '工時回報' },
   { key: 'leave', label: '請假申請' },
   { key: 'settings', label: '必要設定' },
 ] as const
@@ -92,6 +91,15 @@ export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser;
                 出勤打卡
               </a>
             </li>
+            <li>
+              <a
+                href="#/timesheets"
+                className={view === 'timesheets' ? 'nav-item nav-item--active' : 'nav-item'}
+                aria-current={view === 'timesheets' ? 'page' : undefined}
+              >
+                工時回報
+              </a>
+            </li>
             {user.role === 'ADMIN' && (
               <li>
                 <a
@@ -111,6 +119,17 @@ export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser;
                   aria-current={view === 'admin-geofence' ? 'page' : undefined}
                 >
                   定位打卡設定
+                </a>
+              </li>
+            )}
+            {user.role === 'ADMIN' && (
+              <li>
+                <a
+                  href="#/admin/projects"
+                  className={view === 'admin-projects' ? 'nav-item nav-item--active' : 'nav-item'}
+                  aria-current={view === 'admin-projects' ? 'page' : undefined}
+                >
+                  專案管理
                 </a>
               </li>
             )}

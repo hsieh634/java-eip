@@ -25,6 +25,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /** 把 Controller 層拋出的例外統一轉成 ApiError。Security Filter 層的 401／403 由 SecurityConfig 另外處理。 */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -93,6 +96,16 @@ public class GlobalExceptionHandler {
     ResponseEntity<OutsideGeofenceError> onOutsideGeofence(OutsideGeofenceException e) {
         return ResponseEntity.status(e.getStatus())
                 .body(new OutsideGeofenceError(e.getCode(), e.getMessage(), e.getDistanceMeters(), e.getRadiusMeters()));
+    }
+
+    /** T04 起的業務拒絕：{ code, message, …附加欄位 }（附加欄位只有必要的數值或本人紀錄 ID，不含他人資料）。 */
+    @ExceptionHandler(ApiException.class)
+    ResponseEntity<Map<String, Object>> onApiException(ApiException e) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("code", e.getCode());
+        body.put("message", e.getMessage());
+        body.putAll(e.getDetails());
+        return ResponseEntity.status(e.getStatus()).body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

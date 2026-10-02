@@ -71,6 +71,10 @@ T03 起會有**寫入**型 API（打卡等）。若只依賴 Session 內的快�
 
 `/api/admin/geofence` 沿用 ADMIN 規則（URL＋Service＋`ActiveAccountFilter`）；admin 與 developer 權限相同、沒有定位繞過。距離與範圍只由後端判斷，前端只送原始定位資料。瀏覽器定位可被模擬或偽造，本功能**不能完全防止代打卡**；`capturedAt` 是用戶端資訊，不能證明位置真實或防止重播。詳見 [`t03-2/06-security-design.md`](t03-2/06-security-design.md)。
 
+## T04：專案管理與本人工時
+
+`/api/admin/projects/**` 沿用 ADMIN 規則（URL＋Service＋`ActiveAccountFilter`）。工時 API 只操作 Session 中的本人資料：SQL 以 `employee_id` 限定，他人紀錄一律 404；MANAGER、ADMIN 也看不到別人的工時。詳見 [`t04/06-security-design.md`](t04/06-security-design.md)。
+
 ## 已知限制
 
 - 無登入失敗鎖定、無密碼政策、無改密碼流程。

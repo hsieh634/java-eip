@@ -14,9 +14,10 @@ public final class TestData {
      * TRUNCATE 需要把所有互相有外鍵的表列在同一個指令內。
      * T03.2：打卡事件與設定歷程同樣只能新增，也用 TRUNCATE；定位設定列（引用 employee）一起清掉後，
      * 重新建立 V4 的預設值（關閉、未設定中心、100 公尺、上下班都限制）。
+     * T04：專案與工時（工時引用員工與專案）一起清空。
      */
     public static void reset(JdbcTemplate jdbc) {
-        jdbc.execute("truncate table attendance_clock_event, geofence_setting_history, geofence_setting,"
+        jdbc.execute("truncate table timesheet_entry, project, attendance_clock_event, geofence_setting_history, geofence_setting,"
                 + " attendance_history, attendance_request, attendance, employee");
         jdbc.execute("insert into geofence_setting (id) values (1)");
     }

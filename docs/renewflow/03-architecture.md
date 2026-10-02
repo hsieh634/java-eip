@@ -63,6 +63,6 @@ java-eip/
 | T03 | attendance | 以 Session 身份取得員工 ID；Clock 注入；員工＋業務日期唯一限制 |
 | T03.1 | attendance（申請、管理端、歷程） | 版本、作廢、`/api/admin/**`，見 [`t03-1/`](t03-1/) |
 | T03.2 | geofence（定位設定、定位關卡）；attendance（打卡證據） | 打卡交易內以 `FOR SHARE` 取得設定快照；見 [`t03-2/03-architecture.md`](t03-2/03-architecture.md) |
-| T04 | project、timesheet | 專案與工時的資料範圍 |
+| T04 | project、timesheet | 專案管理（ADMIN）與本人工時；員工列鎖保證每日上限；見 [`t04/03-architecture.md`](t04/03-architecture.md) |
 | T05 | leave | 狀態轉移、審核關係（需新增審核人欄位）、樂觀鎖 |
 | T06 | dashboard、設定 | 首頁彙整取代「尚未啟用」卡片；同源部署文件 |

@@ -1,7 +1,7 @@
 # TeamPortal（企業員工入口平台）
 
 Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlow Engineering Method v2**（開發方法名稱）建立。
-**目前進度：T01、T02、T03、T03.1、T03.2**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定）。T04 以後尚未開始。
+**目前進度：T01～T04**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報）。T05 以後尚未開始。
 
 > 命名說明：產品顯示名稱是 TeamPortal；Repository（`java-eip`）、資料夾、Java package（`com.renewflow.eip`）、資料庫、容器與環境變數名稱沿用既有設定。
 
@@ -11,7 +11,8 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | T03 打卡規格 | [docs/renewflow/t03/](docs/renewflow/t03/) |
 | T03.1 更正／重新打卡／管理權限規格 | [docs/renewflow/t03-1/](docs/renewflow/t03-1/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t03-1/review-round-1.md)） |
 | T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
-| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T03-2-review-fixes.md](docs/learning/T03-2-review-fixes.md)；T03.2 主文件：[T03-2-geofenced-attendance.md](docs/learning/T03-2-geofenced-attendance.md)） |
+| T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/) |
+| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
 
 ## 1. 環境需求（Windows 11）
 
@@ -111,7 +112,7 @@ npm run dev
 | `RENEWFLOW_DEV_DEVELOPER_PASSWORD` | `developer`（ADMIN）的**獨立**密碼；僅 dev profile 讀取 | 空＝不建立 developer（沒有預設密碼） |
 | `RENEWFLOW_DEV_SEED_RESET` | 設為 `true` 並重啟一次：只更新開發帳號的密碼雜湊（保留 ID 與出勤資料）；用完改回 `false` | `false` |
 
-隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
+隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
 
 後端由 `backend/` 目錄啟動時會自動讀取上一層的 `.env`；也可直接設定同名的真正環境變數。
 
@@ -136,9 +137,9 @@ cd frontend
 npm run e2e
 ```
 
-`npm run e2e` 依序執行七支腳本，也可單獨執行：
+`npm run e2e` 依序執行八支腳本，也可單獨執行：
 - `npm run e2e:smoke`（基本流程）、`npm run e2e:logout`（登出失敗情境）、`npm run e2e:password`（密碼位元組提示）：對你正在跑的 dev 環境（5173／8080）執行，只登入／登出開發帳號、讀取畫面，**不會打卡、不會提出申請**。
-- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
+- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
 
 腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖與隔離堆疊日誌輸出在 `frontend/e2e/output/`（不進版控）。
 
@@ -190,6 +191,8 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 ## 8. 目前限制
 
 本機學習規則（不代表任何公司制度）：固定白班、台北時區、每人每日最多一筆**有效**出勤；不支援跨日班、輪班、未來時間。誤按或漏打需透過申請（或管理員直接更正），且都會留下歷程；原始紀錄不會被硬刪。
+
+工時回報（T04）沒有簽核、刪除、匯出與專案成員限制；每日 24 小時只是資料合理性上限，不代表工時或加班規則。
 
 定位打卡（T03.2）依瀏覽器提供的位置判斷，位置可被模擬或偽造，**不能完全防止代打卡**；手機用區網 HTTP 位址開網站時瀏覽器通常不允許定位（需要 HTTPS），本階段沒有 HTTPS 與手機實機驗證。
 
@@ -252,3 +255,25 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 5. 人在範圍外時仍可提出「撤銷下班」「整組作廢」「更正／補登」申請，由管理員審核。
 
 **C. 實機限制**：電腦的 `http://localhost:5173` 是安全來源，瀏覽器允許定位；桌機通常只有 Wi-Fi／IP 定位，精度可能超過 50 公尺而被拒絕。手機用 `http://192.168.x.x:5173` 開網站**不是**安全來源，瀏覽器會拒絕定位——需要 HTTPS，本階段尚未處理（要做時會先說明方案、費用與影響）。
+
+## 11. 專案管理與工時回報操作步驟（T04）
+
+> 開發資料庫**沒有**任何預設專案或工時。以下步驟都由你自己在網站上操作。
+
+**A. 管理員（`developer` 或 `admin`）建立專案**
+1. 登入後點左側 **專案管理**（只有管理員看得到）。
+2. 在「建立專案」填 **專案代碼**（2～32 字，英文字母、數字、`_`、`-`；會自動轉大寫，**建立後不可修改**）、**專案名稱**、說明（選填），按 **建立專案**。
+3. 「專案清單」可 **編輯**（名稱、說明）或 **停用**／**重新啟用**；都會跳出確認視窗。若顯示「已被其他管理員修改」，按 **重新載入** 後再操作。
+4. 停用不會刪除專案或工時：員工不能再新增這個專案的工時，既有紀錄仍可查看。
+
+**B. 員工（任何角色）填報工時**
+1. 點左側 **工時回報**（首頁也有「前往工時回報」）。
+2. 在「新增工時」選 **日期**（今天或以前）、**專案**、輸入 **時數（小時）**（以 0.25 為單位：0.25＝15 分、1.5＝1 小時 30 分、7.75＝7 小時 45 分；欄位下方會顯示換算結果），填 **工作內容**，按 **送出**。
+3. 下方「我的工時紀錄」預設顯示本月；可改起訖日按 **查詢**（最多 31 天）或按 **本月**。會顯示每筆紀錄、**期間合計** 與 **每日合計**。
+4. 同一天所有紀錄合計最多 24 小時，超過會被拒絕並說明已記錄多少。
+5. 若送出時網路中斷，畫面會說「無法確認是否已新增」並重新查詢；清單裡沒有這筆時再按 **送出** 即可——會沿用同一個識別碼，**不會重複建立**。要記錄另一筆不同的工作，按 **清空，開始新的一筆**。
+
+**C. 修改自己的工時**
+1. 在清單該列按 **修改**，表單會載入這筆的最新內容；改完按 **送出**。
+2. 若這筆已在別的分頁被修改，會顯示「你的變更沒有儲存」，按 **重新載入最新內容** 後再改。
+3. 專案已停用的紀錄仍可修改日期、時數、內容（專案欄會顯示「（已停用）」），也可以改到其他啟用中的專案；不能把其他紀錄改到停用專案。

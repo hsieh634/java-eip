@@ -4,11 +4,11 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 /** 查詢用的日期範圍：同時提供或同時省略（省略＝今日所在月份）；含起訖日最多 31 個日曆日。員工端與管理端共用。 */
-record DateRange(LocalDate from, LocalDate to) {
+public record DateRange(LocalDate from, LocalDate to) {
 
-    static final int MAX_DAYS = 31;
+    public static final int MAX_DAYS = 31;
 
-    static DateRange resolve(LocalDate from, LocalDate to, LocalDate today) {
+    public static DateRange resolve(LocalDate from, LocalDate to, LocalDate today) {
         if ((from == null) != (to == null)) {
             throw new InvalidDateRangeException("請同時提供起日與迄日，或兩者都不提供（預設為本月）");
         }

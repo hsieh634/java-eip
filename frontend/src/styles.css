@@ -792,3 +792,39 @@ a.nav-item {
     justify-content: flex-end;
   }
 }
+
+/* ---------- T04：工時與專案 ---------- */
+
+/* 工作內容、專案說明可能很長：允許換行，不撐開表格 */
+.cell--wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 28rem;
+}
+
+.row--inactive td {
+  color: var(--muted);
+}
+
+.daily-totals {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+@media (max-width: 720px) {
+  .cell--wrap {
+    max-width: none;
+  }
+}
+
+/* 以連結呈現的按鈕（例如首頁「前往工時回報」） */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  text-decoration: none;
+}

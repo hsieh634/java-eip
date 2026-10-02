@@ -28,47 +28,47 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import({TestFlywayConfig.class, TestClockConfig.class})
-abstract class AttendanceTestBase {
+public abstract class AttendanceTestBase {
 
     /** 測試固定資料，非任何真實帳號密碼。 */
-    static final String PASSWORD = "test-only-Passw0rd";
+    protected static final String PASSWORD = "test-only-Passw0rd";
     /** 台北 2026-10-01 09:00。 */
-    static final Instant DEFAULT_NOW = Instant.parse("2026-10-01T01:00:00Z");
+    protected static final Instant DEFAULT_NOW = Instant.parse("2026-10-01T01:00:00Z");
 
     @LocalServerPort
-    int port;
+    protected int port;
     @Autowired
-    EmployeeRepository employeeRepository;
+    protected EmployeeRepository employeeRepository;
     @Autowired
-    PasswordEncoder passwordEncoder;
+    protected PasswordEncoder passwordEncoder;
     @Autowired
-    JdbcTemplate jdbc;
+    protected JdbcTemplate jdbc;
     @Autowired
-    MutableClock clock;
+    protected MutableClock clock;
 
-    Employee alice;
-    Employee bob;
+    protected Employee alice;
+    protected Employee bob;
 
     @BeforeEach
-    void resetData() {
+    protected void resetData() {
         TestData.reset(jdbc);
         clock.set(DEFAULT_NOW);
         alice = employeeRepository.save(new Employee("T0001", "alice", "愛麗絲", passwordEncoder.encode(PASSWORD), Role.EMPLOYEE));
         bob = employeeRepository.save(new Employee("T0002", "bob", "鮑伯", passwordEncoder.encode(PASSWORD), Role.MANAGER));
     }
 
-    TestBrowser loginAs(String username) {
+    protected TestBrowser loginAs(String username) {
         TestBrowser browser = new TestBrowser(port);
         TestBrowser.Reply reply = browser.login(username, PASSWORD);
         assertThat(reply.status()).as("login as " + username).isEqualTo(200);
         return browser;
     }
 
-    int attendanceRows() {
+    protected int attendanceRows() {
         return jdbc.queryForObject("select count(*) from attendance", Integer.class);
     }
 
-    int attendanceRowsOf(Employee employee) {
+    protected int attendanceRowsOf(Employee employee) {
         return jdbc.queryForObject("select count(*) from attendance where employee_id = ?", Integer.class, employee.getId());
     }
 }
