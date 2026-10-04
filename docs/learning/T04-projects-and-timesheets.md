@@ -113,6 +113,8 @@ Optional<Long> lockEmployee(Long employeeId);
 
 ### 5.5 requestId 與重複提交
 
+> **第 1 輪複審修正背景（請一併閱讀 [`T04-review-fixes-and-stmax-demo.md`](T04-review-fixes-and-stmax-demo.md)）**：本節描述初版的前端流程。複審發現：結果不明時欄位仍可編輯，使用者改了內容再用同一個 requestId 重送，後端回「已建立」後前端清空表單，新內容遺失（R1）；背景更新專案清單失敗會卸載表單（R2）。現行程式已改為「requestId 與提交內容綁定、送出中與結果不明時鎖定表單、重試只重送原內容」，並分開處理專案清單的初次載入與背景更新。下方「網路中斷或 5xx 時保留、再按送出沿用同一個」的描述，應理解為「再送出的是**同一份內容**」。
+
 ```java
 entryRepository.findByEmployeeIdAndRequestId(employeeId, body.requestId())
         .ifPresent(existing -> { throw duplicate(existing.getId()); });

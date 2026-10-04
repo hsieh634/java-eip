@@ -13,6 +13,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     boolean existsByUsername(String username);
 
+    Optional<Employee> findByEmployeeNo(String employeeNo);
+
     /** 每個已驗證請求都會呼叫一次：以主鍵查單列、只取兩個欄位。 */
     @Query("select new com.renewflow.eip.identity.AccountStatus(e.enabled, e.role) from Employee e where e.id = :id")
     Optional<AccountStatus> findAccountStatusById(@Param("id") Long id);

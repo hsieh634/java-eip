@@ -828,3 +828,14 @@ a.btn {
   min-height: 44px;
   text-decoration: none;
 }
+
+/* 鎖定時整組欄位一起停用（fieldset），不要預設的框線與間距 */
+.form-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}

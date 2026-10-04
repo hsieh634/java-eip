@@ -409,10 +409,13 @@ try {
 
     // 第一個管理員送出舊對話框
     await admin.page.bringToFront()
-    await setValue(admin.page, '#direct-in', '08:00:00')
+    // 上班改成 00:00:00：任何時刻都不晚於既有的下班時間，也不在未來（原本寫死 08:00，在台北 08:00 前執行會被「下班早於上班」擋下）
+    await setValue(admin.page, '#direct-in', '00:00:00')
     await setValue(admin.page, '#direct-reason', '舊對話框')
     await click(admin.page, '確認更正')
-    await waitText(admin.page, '這筆出勤資料已被其他操作更新')
+    await waitText(admin.page, '這筆出勤資料已被其他操作更新').catch(async (e) => {
+      throw new Error(`舊對話框沒有得到 409：${await admin.page.$eval('[role=dialog]', (el) => el.textContent).catch(() => '(無對話框)')}`, { cause: e })
+    })
     check('E5 舊對話框送出 → 409「已被其他操作更新」，對話框仍開著', (await admin.page.$('[role=dialog]')) !== null)
     await click(admin.page, '取消')
     const replacementAfter = await a.page.evaluate(async () => (await fetch('/api/attendance/me/today')).json())

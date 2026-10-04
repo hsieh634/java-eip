@@ -112,3 +112,15 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 開發庫已套用 V5：員工、出勤、申請、歷程、定位設定與歷程、打卡事件逐列雜湊相同；定位維持關閉、中心未設定；專案與工時皆為 0 筆。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t04/`；學習文件：`docs/learning/T04-projects-and-timesheets.md`。
+
+## 第 9 輪：T04 複審修正（R1、R2）＋STMAX 示範初始化＋產品方向文件
+
+- 審查基準：`3b1e7962da6dc201e48935d41b0cc0732764e5d4`。
+- 本批 commit：標題為 `fix: T04 review round 1 ...` 的 commit，完整 SHA 見交付報告。
+- 前端：`TimesheetPage` 的提交快照與鎖定（R1）、頁內專案清單載入（R2）；共用 `useLoad` 未修改。
+- 後端：新增 `StmaxDemoSeedRunner`（dev 限定、預設關閉、沒有預設密碼、冪等、碰撞時安全停止）與 `EmployeeRepository.findByEmployeeNo`；設定 `renewflow.demo.stmax.*`。沒有新的 migration（仍為 V1～V5）。新增相依套件：**無**。
+- 測試：後端 239 → 246；E2E 新增 `timesheets-review.mjs`（修正前 12/20、修正後 24/24）；`timesheets.mjs` 中 W2、W5 期望隨新規則更新（49/49）。
+- 既有測試修正：`attendance-corrections.mjs` E5 原本把上班時間寫死為 08:00，在台北 08:00 前執行會被前端「下班早於上班」擋下（與本批修改無關、取決於執行時刻）；改為 00:00:00。
+- 開發庫：依使用者授權，在本機 `.env` 產生隨機示範密碼並開啟開關，重啟後端建立六個 STMAX 示範帳號（`stmax_max`、`stmax_iris`、`stmax_leo`、`stmax_mia`、`stmax_ryan`、`stmax_zoe`）。其餘員工、出勤、申請、歷程、定位設定與歷程、打卡事件、專案、工時逐表比對不變。
+- 文件：`product-direction.md`、`roadmap.md`、`demo-stmax.md`、`t04/review-round-1.md`、學習文件 `T04-review-fixes-and-stmax-demo.md`。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。

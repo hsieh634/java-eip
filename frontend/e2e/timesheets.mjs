@@ -204,8 +204,9 @@ try {
     await fillEntry(page, { date: yesterday, project: CODE_B, hours: '1', description: '停用後才送出' })
     await click(page, '送出')
     await page.waitForFunction(() => document.querySelector('[data-testid=entry-error]')?.textContent.includes('已停用'))
-    await page.waitForFunction((c) => ![...document.querySelectorAll('#ts-project option')].some((o) => o.textContent.includes(c)), {}, CODE_B)
-    check('W2 停用專案不可新增；專案清單重新載入後不再列出 B', (await rows(page)).every((r) => !r.text.includes('停用後才送出')))
+    // 專案清單重新載入後，B 不再是可選的選項；目前草稿選著的 B 只以「停用或無法選擇」的停用選項標示（不偷偷改選）
+    await page.waitForFunction((c) => ![...document.querySelectorAll('#ts-project option')].some((o) => o.textContent.includes(c) && !o.disabled), {}, CODE_B)
+    check('W2 停用專案不可新增；專案清單重新載入後 B 不再可選（草稿中的選擇標示為無法選擇）', (await page.$('[data-testid=project-unavailable]')) !== null && (await rows(page)).every((r) => !r.text.includes('停用後才送出')))
     const bRow = (await rows(page)).find((r) => r.text.includes(CODE_B))
     check('W2 舊紀錄仍可查看，並標示「已停用」', bRow?.text.includes('已停用'))
     await page.click(`tr[data-entry-id="${bRow.id}"] button`)
@@ -293,11 +294,11 @@ try {
     await fillEntry(page, { date: yesterday, project: CODE_A, hours: '0.75', description: '網路不穩時的新增' })
     await click(page, '送出')
     await page.waitForSelector('[data-testid=entry-form][data-unknown=true]')
-    check('W5 網路結果不明 → 提示「無法確認是否已新增」，不自動重送', (await entryError(page)).includes('無法確認是否已新增'))
+    check('W5 網路結果不明 → 提示「無法確認原提交是否已新增」、表單鎖定，不自動重送', (await entryError(page)).includes('無法確認原提交是否已新增'))
     await page.waitForFunction(() => [...document.querySelectorAll('[data-testid=timesheet-table] tbody tr')].some((tr) => tr.innerText.includes('網路不穩時的新增')))
     check('W5 重新查詢後清單已出現這筆（伺服器其實已建立）', true)
-    await click(page, '送出') // 使用者再按一次：沿用同一個 requestId
-    await waitText(page, '先前已經建立')
+    await click(page, '重新送出原內容') // 結果不明時表單鎖定在原內容，重送沿用同一個 requestId
+    await waitText(page, '原提交已經建立')
     const bodies = ctlA.createBodies.slice(-2)
     check('W5 再按送出沿用同一個 requestId → 後端回「已建立」，沒有新增第二筆',
       bodies[0].requestId === bodies[1].requestId && (await rows(page)).filter((r) => r.text.includes('網路不穩時的新增')).length === 1, JSON.stringify(bodies.map((b) => b.requestId)))
