@@ -124,3 +124,13 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 開發庫：依使用者授權，在本機 `.env` 產生隨機示範密碼並開啟開關，重啟後端建立六個 STMAX 示範帳號（`stmax_max`、`stmax_iris`、`stmax_leo`、`stmax_mia`、`stmax_ryan`、`stmax_zoe`）。其餘員工、出勤、申請、歷程、定位設定與歷程、打卡事件、專案、工時逐表比對不變。
 - 文件：`product-direction.md`、`roadmap.md`、`demo-stmax.md`、`t04/review-round-1.md`、學習文件 `T04-review-fixes-and-stmax-demo.md`。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+
+## 第 10 輪：T04 第 2 輪複審（R1 重試邊界：R1-A、R1-B）
+
+- 審查基準：`00593e78ba4294c185a56ead7808ab5571c4b4fa`。上一輪 R2 已被接受；STMAX 初始化未發現阻擋問題。
+- 本批 commit：標題為 `fix: T04 review round 2 ...` 的 commit，完整 SHA 見交付報告。
+- 只修改前端 `TimesheetPage.tsx`：未確認快照（`pending`）決定「原提交是否尚未確認」，重試失敗不解鎖（R1-A）；確認原提交不受「沒有啟用專案」限制（R1-B）。後端、API、migration、共用元件、相依套件、示範帳號都未修改。
+- 測試：新增 `timesheets-retry-boundaries.mjs`（基準版本 13/24、修正後 25/25）；`timesheets-review.mjs` 24/24、`timesheets.mjs` 49/49。後端 246 沿用上一輪證據（本次未重跑，因後端未修改）。
+- 上一輪登入頁偶發逾時（`attendance-corrections.mjs` 中一次 `#username` 等待逾時）：本輪未重跑該腳本、也未再重現，**原因仍未確定**。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t04/review-round-2.md`；學習文件：`docs/learning/T04-retry-state-boundaries.md`。

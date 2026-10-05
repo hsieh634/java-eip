@@ -358,7 +358,10 @@ interface EntryFieldsProps extends FormCallbacks {
  * - submitting：請求進行中，表單鎖定——成功後會換新表單，不能讓「送出後才輸入的內容」被一起清掉。
  * - unknown：新增的結果不明（網路中斷、回應遺失、5xx）。表單鎖定在剛才那份提交內容，requestId 與它綁在一起；
  *   只能「重新送出原內容」（同一個 requestId、同一份內容）來確認，或明確「放棄追蹤」。
- * 明確的拒絕（欄位不合法、專案停用、每日上限…）代表後端沒有建立任何東西，回到 editing 讓使用者修正。
+ * 「原提交是否尚未確認」不由 phase 決定，而是由 pending（未確認快照）是否存在決定：重試時 phase 會暫時變成
+ * submitting，但 pending 仍在，所以不會忘記「這是未確認提交的重試」（T04 第 2 輪複審 R1-A）。
+ * 首次送出就被明確拒絕（欄位不合法、專案停用、每日上限…）代表後端沒有建立任何東西，回到 editing 讓使用者修正；
+ * 但未確認期間的重試被拒絕，只代表「這一次」被拒絕，不能證明原提交不存在——維持鎖定，直到確認建立或明確放棄。
  */
 type Phase = 'editing' | 'submitting' | 'unknown'
 
@@ -384,7 +387,8 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
   const [error, setError] = useState<string | null>(null)
   const [conflict, setConflict] = useState(false)
   const [phase, setPhase] = useState<Phase>('editing')
-  // 結果不明時「已經送出過的那一份內容」；重送只送它
+  // 未確認快照：新增結果不明時「已經送出過的那一份內容」。只有確認建立（201／DUPLICATE_SUBMISSION）
+  // 或使用者明確放棄（外層換 key）才會消失；重試失敗不清除。重送只送它
   const [pending, setPending] = useState<Submission | null>(null)
   const [confirmAbandon, setConfirmAbandon] = useState(false)
   // 防連按：ref 立即生效（state 要等下一次 render）
@@ -408,7 +412,8 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
     if (!locked) apply()
   }
 
-  async function send(values: Submission) {
+  /** retrying：這次送出的是未確認快照（pending）的重試。 */
+  async function send(values: Submission, retrying: boolean) {
     submitting.current = true
     setPhase('submitting')
     setError(null)
@@ -425,6 +430,20 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
       if (e instanceof ApiError && e.code === 'DUPLICATE_SUBMISSION') {
         // 只代表「原提交已經存在」——而送出的正是原提交（表單一直鎖定），所以沒有任何未儲存的新內容被丟掉
         onDone(`原提交已經建立（紀錄 #${String(e.details.entryId)}），沒有重複新增。若要更改內容，請在下方清單按「修改」。`)
+        return
+      }
+      if (retrying) {
+        // 未確認提交的重試失敗：這次被拒絕（403、專案停用、每日上限…）或仍連不上，都不能證明原提交不存在。
+        // 保留快照、requestId 與鎖定，離開 loading，讓使用者再手動重試或明確放棄（不自動重試）。
+        // 401 由 messageOf 走既有的登入失效流程（回登入頁、表單卸載），不會以別的帳號重送。
+        const reason = e instanceof ApiError && (e.status === 0 || e.status >= 500) ? '仍無法連線或伺服器發生錯誤' : messageOf(e)
+        setPhase('unknown')
+        setError(
+          `本次重新送出沒有成功：${reason}。原提交的結果仍未確認，表單維持鎖定為原內容：` +
+            '可以再按「重新送出原內容」確認，或按「放棄追蹤，開始新的一筆」。',
+        )
+        if (e instanceof ApiError && (e.code === 'PROJECT_INACTIVE' || e.code === 'PROJECT_NOT_FOUND')) onProjectsStale()
+        onListStale()
         return
       }
       if (!entry && e instanceof ApiError && (e.status === 0 || e.status >= 500)) {
@@ -463,8 +482,9 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (submitting.current) return
-    if (phase === 'unknown' && pending) {
-      await send(pending) // 只重送原內容
+    if (pending) {
+      // 確認原提交：只用未確認快照，不依目前的欄位或下拉選單重組（即使啟用專案清單已經變空）
+      await send(pending, true)
       return
     }
     if (!workDate) return setError('請選擇日期。')
@@ -473,18 +493,22 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
     if (!description.trim()) return setError('請填寫工作內容。')
     const minutes = parseHours(hours)
     if (!minutes.ok) return setError(minutes.message)
-    await send({ workDate, projectId: Number(projectId), description: description.trim(), minutes: minutes.minutes })
+    await send({ workDate, projectId: Number(projectId), description: description.trim(), minutes: minutes.minutes }, false)
   }
 
   const noProjects = !entry && projects.length === 0
+  // 新增新工時需要啟用專案；確認原提交（有未確認快照）不需要——那是同一份已送出的內容，由後端判斷是否已建立
+  const canSubmit = phase !== 'submitting' && (pending !== null || !noProjects)
   let submitLabel = '送出'
   if (phase === 'submitting') submitLabel = '送出中…'
   else if (phase === 'unknown') submitLabel = '重新送出原內容'
   return (
-    <form className="correction-form" onSubmit={submit} noValidate data-testid="entry-form" data-mode={entry ? 'edit' : 'new'} data-phase={phase} data-unknown={phase === 'unknown' || undefined}>
+    <form className="correction-form" onSubmit={submit} noValidate data-testid="entry-form" data-mode={entry ? 'edit' : 'new'} data-phase={phase} data-unknown={phase === 'unknown' || undefined} data-unconfirmed={pending !== null || undefined}>
       {noProjects && (
         <p className="banner banner--warn" data-testid="no-projects">
-          目前沒有可填報的專案，請先由管理員建立或啟用專案。
+          {pending
+            ? '目前沒有可填報的專案，不能新增新的工時；但上一筆提交的結果仍未確認，仍可按「重新送出原內容」確認是否已建立。'
+            : '目前沒有可填報的專案，請先由管理員建立或啟用專案。'}
         </p>
       )}
       <fieldset className="form-fieldset" disabled={locked}>
@@ -543,7 +567,7 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
         </div>
       )}
       <div className="actions">
-        <button type="submit" className="btn btn--primary" disabled={phase === 'submitting' || noProjects}>
+        <button type="submit" className="btn btn--primary" disabled={!canSubmit}>
           {submitLabel}
         </button>
         {conflict && onReload && (

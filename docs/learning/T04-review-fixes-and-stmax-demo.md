@@ -1,7 +1,9 @@
 # T04 第 1 輪複審修正（R1、R2）與 STMAX 示範初始化——學習說明
 
 審查基準：`3b1e796`；本批 commit 見交付報告（標題 `fix: T04 review round 1 ...`）。規格：`docs/renewflow/t04/review-round-1.md`、`docs/renewflow/demo-stmax.md`。
-狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。
+狀態：**已實作／作者自測完成**。
+
+> **第 2 輪補充（請一併閱讀 [`T04-retry-state-boundaries.md`](T04-retry-state-boundaries.md)）**：本文件第 3、4 節說「明確拒絕 → 解鎖」，那只適用於**首次送出**。原提交結果不明之後的重試若被拒絕（例如 403、專案停用），舊程式也會解鎖並清除快照（R1-A）；結果不明時啟用專案清單變空也按不到重送（R1-B）。這兩點本文件的測試沒有涵蓋，已在第 2 輪修正。
 
 ---
 

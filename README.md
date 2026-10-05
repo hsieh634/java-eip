@@ -11,10 +11,10 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | T03 打卡規格 | [docs/renewflow/t03/](docs/renewflow/t03/) |
 | T03.1 更正／重新打卡／管理權限規格 | [docs/renewflow/t03-1/](docs/renewflow/t03-1/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t03-1/review-round-1.md)） |
 | T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
-| T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t04/review-round-1.md)） |
+| T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（複審：[第 1 輪](docs/renewflow/t04/review-round-1.md)、[第 2 輪](docs/renewflow/t04/review-round-2.md)） |
 | 產品方向、路線圖 | [product-direction.md](docs/renewflow/product-direction.md)、[roadmap.md](docs/renewflow/roadmap.md) |
 | STMAX 示範情境（虛構公司與帳號） | [demo-stmax.md](docs/renewflow/demo-stmax.md) |
-| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T04-review-fixes-and-stmax-demo.md](docs/learning/T04-review-fixes-and-stmax-demo.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
+| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T04-retry-state-boundaries.md](docs/learning/T04-retry-state-boundaries.md)；上一輪：[T04-review-fixes-and-stmax-demo.md](docs/learning/T04-review-fixes-and-stmax-demo.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
 
 ## 1. 環境需求（Windows 11）
 
@@ -116,7 +116,7 @@ npm run dev
 | `RENEWFLOW_DEMO_STMAX_PASSWORD` | STMAX 六個示範帳號的共用密碼；只放在本機 `.env` | 空＝不建立（沒有預設密碼） |
 | `RENEWFLOW_DEV_SEED_RESET` | 設為 `true` 並重啟一次：只更新開發帳號的密碼雜湊（保留 ID 與出勤資料）；用完改回 `false` | `false` |
 
-隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets`、`e2e:timesheets-review` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
+隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets`、`e2e:timesheets-review`、`e2e:timesheets-retry` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
 
 後端由 `backend/` 目錄啟動時會自動讀取上一層的 `.env`；也可直接設定同名的真正環境變數。
 
@@ -141,9 +141,9 @@ cd frontend
 npm run e2e
 ```
 
-`npm run e2e` 依序執行九支腳本，也可單獨執行：
+`npm run e2e` 依序執行十支腳本，也可單獨執行：
 - `npm run e2e:smoke`（基本流程）、`npm run e2e:logout`（登出失敗情境）、`npm run e2e:password`（密碼位元組提示）：對你正在跑的 dev 環境（5173／8080）執行，只登入／登出開發帳號、讀取畫面，**不會打卡、不會提出申請**。
-- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）、`npm run e2e:timesheets-review`（T04 複審 R1／R2：結果不明的重送與背景更新失敗）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
+- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）、`npm run e2e:timesheets-review`（T04 複審 R1／R2：結果不明的重送與背景更新失敗）、`npm run e2e:timesheets-retry`（T04 第 2 輪：重試失敗不解鎖、清單為空仍可確認）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
 
 腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖與隔離堆疊日誌輸出在 `frontend/e2e/output/`（不進版控）。
 
@@ -275,7 +275,7 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 2. 在「新增工時」選 **日期**（今天或以前）、**專案**、輸入 **時數（小時）**（以 0.25 為單位：0.25＝15 分、1.5＝1 小時 30 分、7.75＝7 小時 45 分；欄位下方會顯示換算結果），填 **工作內容**，按 **送出**。
 3. 下方「我的工時紀錄」預設顯示本月；可改起訖日按 **查詢**（最多 31 天）或按 **本月**。會顯示每筆紀錄、**期間合計** 與 **每日合計**。
 4. 同一天所有紀錄合計最多 24 小時，超過會被拒絕並說明已記錄多少。
-5. 若送出時網路中斷或沒有收到回應，畫面會說「無法確認原提交是否已新增」，並**鎖定表單在剛才送出的內容**、重新查詢清單。按 **重新送出原內容** 會用同一個識別碼確認，**不會重複建立**；確認建立後要改內容，請在清單按 **修改**。若確定要放棄這次提交，按 **放棄追蹤，開始新的一筆**（會先提醒原提交可能已經建立）。這個保護只在目前開著的頁面有效，重新整理後請先查看清單確認。
+5. 若送出時網路中斷或沒有收到回應，畫面會說「無法確認原提交是否已新增」，並**鎖定表單在剛才送出的內容**、重新查詢清單。按 **重新送出原內容** 會用同一個識別碼確認，**不會重複建立**；確認建立後要改內容，請在清單按 **修改**。重新送出若又失敗（例如安全驗證失敗、專案已停用、網路仍不通），畫面會顯示這次的原因，並說明「原提交的結果仍未確認」，表單維持鎖定，可以再按一次；即使目前沒有任何啟用中的專案，也仍可按 **重新送出原內容** 確認上一筆。若確定要放棄這次提交，按 **放棄追蹤，開始新的一筆**（會先提醒原提交可能已經建立）。這個保護只在目前開著的頁面有效，重新整理後請先查看清單確認。
 6. 送出時若顯示專案已停用，表單內容會保留；專案清單若更新失敗，會另外顯示「重試更新專案清單」。原本選的專案會標示「已停用或無法選擇」，請自行改選。
 
 **C. 修改自己的工時**
