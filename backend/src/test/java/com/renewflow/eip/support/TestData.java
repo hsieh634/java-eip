@@ -15,10 +15,11 @@ public final class TestData {
      * T03.2：打卡事件與設定歷程同樣只能新增，也用 TRUNCATE；定位設定列（引用 employee）一起清掉後，
      * 重新建立 V4 的預設值（關閉、未設定中心、100 公尺、上下班都限制）。
      * T04：專案與工時（工時引用員工與專案）一起清空。
+     * T05 前置：組織歷程（只能新增）與部門一起清空（員工引用部門）。
      */
     public static void reset(JdbcTemplate jdbc) {
-        jdbc.execute("truncate table timesheet_entry, project, attendance_clock_event, geofence_setting_history, geofence_setting,"
-                + " attendance_history, attendance_request, attendance, employee");
+        jdbc.execute("truncate table organization_history, timesheet_entry, project, attendance_clock_event, geofence_setting_history,"
+                + " geofence_setting, attendance_history, attendance_request, attendance, employee, department");
         jdbc.execute("insert into geofence_setting (id) values (1)");
     }
 

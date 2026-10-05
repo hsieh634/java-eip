@@ -49,3 +49,7 @@ renewflow:
       enabled: ${RENEWFLOW_DEMO_STMAX_ENABLED:false}
       # 六個示範帳號共用的密碼；沒有預設值，未設定就不建立
       password: ${RENEWFLOW_DEMO_STMAX_PASSWORD:}
+      org:
+        # 只有 dev profile 的 StmaxOrganizationSeedRunner 會讀。預設關閉；把六個帳號排進三個示範部門並設定主管
+        # 只補未指派的欄位，已有不同值時保留並回報；不改帳號、密碼、角色、啟用狀態
+        enabled: ${RENEWFLOW_DEMO_STMAX_ORG_ENABLED:false}

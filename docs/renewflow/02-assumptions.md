@@ -15,6 +15,8 @@
 
 T03（打卡）的學習假設 A-07～A-14 與決策 D-14～D-18 另記於 [`t03/02-assumptions.md`](t03/02-assumptions.md)；T03.1（更正、重新打卡、管理權限）的 A-15～A-22 與 D-19～D-26 記於 [`t03-1/02-assumptions.md`](t03-1/02-assumptions.md)。
 
+> T05 前置的假設 A-70～A-78 與決策 D-60～D-69 見 [`t05-foundation/02-assumptions.md`](t05-foundation/02-assumptions.md)（組織鎖、版本號的限制、示範組織初始化）。
+
 ## 技術決策紀錄（ADR 簡版）
 
 | 編號 | 決策 | 原因 | 替代方案與成本 |

@@ -134,3 +134,19 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 上一輪登入頁偶發逾時（`attendance-corrections.mjs` 中一次 `#username` 等待逾時）：本輪未重跑該腳本、也未再重現，**原因仍未確定**。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t04/review-round-2.md`；學習文件：`docs/learning/T04-retry-state-boundaries.md`。
+
+## 第 11 輪：T04 結案＋T05 前置——最小組織與員工管理
+
+- 審查基準：`f7204277033b3d85ab99a6539a5a15b4239d856b`。
+- **T04 已通過 ChatGPT 複審，結案。** 複審證據的性質：ChatGPT 完成程式審查及實際函式的受控驗證；完整 E2E、build／lint 是作者自測證據。**不是** ChatGPT 重新執行了全部測試。
+- 本批 commit：標題為 `feat: T05 foundation ...` 的 commit，完整 SHA 見交付報告。
+- 定位：**T05 前置子任務**（不更動 T01～T06 編號）；不包含請假。
+- 新增相依套件、工具、映像檔、服務：**無**。新增 migration：`V6__organization_foundation.sql`（新表 `department`、`organization_history`；`employee` 新增 `department_id`、`manager_id`、`version`；V1～V5 未修改；不建立任何部門或員工資料）。
+- 後端：新套件 `organization`（部門、員工管理、組織鎖 `pg_advisory_xact_lock`、只新增的組織歷程、dev 專用 `StmaxOrganizationSeedRunner`）；`Employee` 新增三個 JPA 唯讀欄位；`StmaxDemoSeedRunner` 加上 `@Order(100)`；設定 `renewflow.demo.stmax.org.enabled`（`RENEWFLOW_DEMO_STMAX_ORG_ENABLED`，預設 `false`）。
+- 前端：「組織與員工」頁（`#/admin/organization`，只有 ADMIN 有入口）；側邊選單的管理入口改為清單渲染（行為不變）。
+- 既有測試調整（保留原驗收意義）：`TestData.reset` 加入新表；乾淨庫與 V1 升級的版本清單加入 6；測試設定的連線池常駐連線改為 2、閒置 10 秒釋放（上限不變；原因是全套測試實際出現 `too many clients already`，見 D-69）。
+- 測試：後端 246 → 282；E2E 新增 `organization.mjs`（54/54）；回歸 smoke 18、logout 23、password 10、attendance 37、corrections 74、geofence 59、races 22、timesheets 49、timesheets-review 24、timesheets-retry 25 全部通過。變異驗證 5 項（組織鎖、循環、最後 ADMIN、Service 權限、部屬）都使對應測試失敗。
+- 開發庫：依授權在本機 `.env` 開啟 `RENEWFLOW_DEMO_STMAX_ORG_ENABLED`，重啟後端套用 V6 與 STMAX 示範組織（3 個部門、6 人的部門與主管、9 筆系統來源歷程）。非 STMAX 員工的 V5 欄位、STMAX 的 V5 欄位（不含 `updated_at`）、其他所有表逐列雜湊相同；第二次重啟沒有任何變更。
+- 上一輪記錄的偶發登入逾時：本輪全部 E2E 未再出現，**原因仍未確定**。
+- 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t05-foundation/`；學習文件：`docs/learning/T05-foundation-organization-and-employees.md`。

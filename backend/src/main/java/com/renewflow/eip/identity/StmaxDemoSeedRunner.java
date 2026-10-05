@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -29,6 +30,7 @@ import java.util.Optional;
  */
 @Component
 @Profile("dev")
+@Order(100) // 先於 StmaxOrganizationSeedRunner（@Order(200)）：組織排列需要帳號已存在
 public class StmaxDemoSeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(StmaxDemoSeedRunner.class);

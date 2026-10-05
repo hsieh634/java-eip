@@ -48,6 +48,17 @@ public class Employee {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    // T05 前置：組織欄位。對 JPA 唯讀（insertable／updatable = false）：只由組織管理的條件式 SQL 修改，
+    // 避免其他地方的 save（例如開發帳號重設密碼）用舊值覆寫部門、主管或版本
+    @Column(name = "department_id", insertable = false, updatable = false)
+    private Long departmentId;
+
+    @Column(name = "manager_id", insertable = false, updatable = false)
+    private Long managerId;
+
+    @Column(name = "version", insertable = false, updatable = false)
+    private Long version;
+
     /** JPA 規範需要無參數建構子；設為 protected 避免業務程式誤用。 */
     protected Employee() {
     }
@@ -95,6 +106,27 @@ public class Employee {
 
     public Role getRole() {
         return role;
+    }
+
+    public Long getDepartmentId() {
+        return departmentId;
+    }
+
+    public Long getManagerId() {
+        return managerId;
+    }
+
+    /** 組織管理的版本（新建、尚未重新讀取時可能是 null，代表資料庫預設值 0）。 */
+    public long getVersion() {
+        return version == null ? 0 : version;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     public boolean isEnabled() {

@@ -1,7 +1,7 @@
 # TeamPortal（企業員工入口平台）
 
 Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlow Engineering Method v2**（開發方法名稱）建立。
-**目前進度：T01～T04**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報）。T05 以後尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
+**目前進度：T01～T04＋T05 前置**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報；T05 前置：最小組織與員工管理）。T05 請假尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
 
 > 命名說明：產品顯示名稱是 TeamPortal；Repository（`java-eip`）、資料夾、Java package（`com.renewflow.eip`）、資料庫、容器與環境變數名稱沿用既有設定。
 
@@ -12,9 +12,10 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | T03.1 更正／重新打卡／管理權限規格 | [docs/renewflow/t03-1/](docs/renewflow/t03-1/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t03-1/review-round-1.md)） |
 | T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
 | T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（複審：[第 1 輪](docs/renewflow/t04/review-round-1.md)、[第 2 輪](docs/renewflow/t04/review-round-2.md)） |
+| T05 前置：組織與員工規格 | [docs/renewflow/t05-foundation/](docs/renewflow/t05-foundation/) |
 | 產品方向、路線圖 | [product-direction.md](docs/renewflow/product-direction.md)、[roadmap.md](docs/renewflow/roadmap.md) |
 | STMAX 示範情境（虛構公司與帳號） | [demo-stmax.md](docs/renewflow/demo-stmax.md) |
-| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T04-retry-state-boundaries.md](docs/learning/T04-retry-state-boundaries.md)；上一輪：[T04-review-fixes-and-stmax-demo.md](docs/learning/T04-review-fixes-and-stmax-demo.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
+| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T05-foundation-organization-and-employees.md](docs/learning/T05-foundation-organization-and-employees.md)；T04 第 2 輪：[T04-retry-state-boundaries.md](docs/learning/T04-retry-state-boundaries.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
 
 ## 1. 環境需求（Windows 11）
 
@@ -114,9 +115,10 @@ npm run dev
 | `RENEWFLOW_DEV_DEVELOPER_PASSWORD` | `developer`（ADMIN）的**獨立**密碼；僅 dev profile 讀取 | 空＝不建立 developer（沒有預設密碼） |
 | `RENEWFLOW_DEMO_STMAX_ENABLED` | 是否建立虛構示範公司 STMAX 的六個帳號；僅 dev profile 讀取（見 [demo-stmax.md](docs/renewflow/demo-stmax.md)） | `false` |
 | `RENEWFLOW_DEMO_STMAX_PASSWORD` | STMAX 六個示範帳號的共用密碼；只放在本機 `.env` | 空＝不建立（沒有預設密碼） |
+| `RENEWFLOW_DEMO_STMAX_ORG_ENABLED` | 把 STMAX 六個帳號排進三個示範部門並設定主管（只補未指派的欄位、不改回管理員的調整）；僅 dev profile 讀取 | `false` |
 | `RENEWFLOW_DEV_SEED_RESET` | 設為 `true` 並重啟一次：只更新開發帳號的密碼雜湊（保留 ID 與出勤資料）；用完改回 `false` | `false` |
 
-隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets`、`e2e:timesheets-review`、`e2e:timesheets-retry` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
+隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets`、`e2e:timesheets-review`、`e2e:timesheets-retry`、`e2e:organization` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
 
 後端由 `backend/` 目錄啟動時會自動讀取上一層的 `.env`；也可直接設定同名的真正環境變數。
 
@@ -141,9 +143,9 @@ cd frontend
 npm run e2e
 ```
 
-`npm run e2e` 依序執行十支腳本，也可單獨執行：
+`npm run e2e` 依序執行十一支腳本，也可單獨執行：
 - `npm run e2e:smoke`（基本流程）、`npm run e2e:logout`（登出失敗情境）、`npm run e2e:password`（密碼位元組提示）：對你正在跑的 dev 環境（5173／8080）執行，只登入／登出開發帳號、讀取畫面，**不會打卡、不會提出申請**。
-- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）、`npm run e2e:timesheets-review`（T04 複審 R1／R2：結果不明的重送與背景更新失敗）、`npm run e2e:timesheets-retry`（T04 第 2 輪：重試失敗不解鎖、清單為空仍可確認）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
+- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）、`npm run e2e:timesheets-review`（T04 複審 R1／R2：結果不明的重送與背景更新失敗）、`npm run e2e:timesheets-retry`（T04 第 2 輪：重試失敗不解鎖、清單為空仍可確認）、`npm run e2e:organization`（T05 前置：部門、員工、主管、過期表單、Session 失效、權限、手機）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
 
 腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖與隔離堆疊日誌輸出在 `frontend/e2e/output/`（不進版控）。
 
@@ -200,7 +202,9 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 
 定位打卡（T03.2）依瀏覽器提供的位置判斷，位置可被模擬或偽造，**不能完全防止代打卡**；手機用區網 HTTP 位址開網站時瀏覽器通常不允許定位（需要 HTTPS），本階段沒有 HTTPS 與手機實機驗證。
 
-沒有登入失敗鎖定、改密碼、員工管理、多層審核、通知；Session 存在記憶體（重啟後端需重新登入）；正式環境的同源部署與 HTTPS 設定尚未處理（只定義了 Cookie `Secure` 預設為 true）。詳見安全設計文件。
+組織與員工（T05 前置）：部門是平面清單、每人最多一位直屬主管；沒有刪除、沒有修改帳號／員工編號、沒有密碼修改或重設、沒有邀請信；**主管關係不授與任何資料權限**（主管看不到部屬的出勤或工時）。
+
+沒有登入失敗鎖定、改密碼、多層審核、通知；Session 存在記憶體（重啟後端需重新登入）；正式環境的同源部署與 HTTPS 設定尚未處理（只定義了 Cookie `Secure` 預設為 true）。詳見安全設計文件。
 
 ## 9. 出勤更正操作步驟（T03.1）
 
@@ -292,4 +296,31 @@ STMAX 是虛構的網站開發與數位行銷公司，帳號與姓名全部虛�
 3. 以 `stmax_max`（ADMIN）、`stmax_iris`（MANAGER）、`stmax_leo`／`stmax_mia`／`stmax_ryan`／`stmax_zoe`（EMPLOYEE）登入；密碼是 `.env` 中 `RENEWFLOW_DEMO_STMAX_PASSWORD` 的值。
 4. 重啟不會重設密碼或修改這些帳號；改回 `false` 只會停止建立，不會刪除已建立的帳號。
 
-示範專案（STMAX 官網改版、虛構客戶品牌網站、虛構客戶廣告代操）只寫在文件中，需要時由 `stmax_max` 在「專案管理」手動建立。MANAGER 目前沒有部門或審核對象（屬 T05 前置規劃）。
+5. （T05 前置）另外設定 `RENEWFLOW_DEMO_STMAX_ORG_ENABLED=true` 並重啟：建立 MANAGEMENT／PROJECT／ADMINISTRATION 三個部門，把六人排進部門並設定主管（Iris 的主管是 Max；Leo、Mia、Ryan 的主管是 Iris；Zoe 的主管是 Max）。只補空白欄位，重啟不會改回你在畫面上的調整。
+
+示範專案（STMAX 官網改版、虛構客戶品牌網站、虛構客戶廣告代操）只寫在文件中，需要時由 `stmax_max` 在「專案管理」手動建立。Iris 是 Leo、Mia、Ryan 的直屬主管，但目前還不能審核任何東西（請假審核屬 T05）。
+
+## 13. 組織與員工操作步驟（T05 前置）
+
+> 部門與員工都不刪除，只停用。以下步驟都由管理員自己在網站上操作；系統不會自動改任何人的主管。
+
+**A. 查看組織（例如以 `stmax_max` 登入）**
+1. 點左側 **組織與員工**（只有管理員看得到）。預設在 **員工** 分頁：清單列出員工編號、姓名、帳號、角色、部門、直屬主管、狀態。
+2. 在 **搜尋** 輸入姓名、帳號或員工編號（例如 `stmax`），可再選 **狀態**（全部／啟用中／已停用），按 **搜尋**。每頁 20 人，用 **上一頁**／**下一頁** 翻頁。
+3. 切到 **部門** 分頁可看到每個部門的啟用員工數與狀態。每一列的 **歷程** 顯示誰在何時改了什麼、原因與前後值。
+
+**B. 建立部門**：在 **部門** 分頁填 **部門代碼**（2～32 字，英文字母、數字、`_`、`-`；自動轉大寫，**建立後不可修改**）與 **部門名稱**，按 **建立部門**。
+
+**C. 新增員工**
+1. **員工** 分頁按 **新增員工**，填 **員工編號**（自動轉大寫）、**帳號**（自動轉小寫；兩者建立後都不可修改）、**顯示名稱**、**角色**、**部門**與**直屬主管**（可留「未指派」）。
+2. 輸入 **初始密碼**（最多 72 位元組；前後空白也算）。系統**不會寄送邀請信，也不會要求首次登入改密碼**：請你用安全的方式把帳號與初始密碼交給本人。建立後系統不會再顯示這個密碼。
+3. 按 **確認建立**。新同事即可用該帳號登入、打卡、填工時（沒有部門也可以）。
+
+**D. 修改員工（名稱、角色、啟用、部門、直屬主管）**
+1. 在該列按 **編輯**。下方的 **變更摘要** 會列出每個欄位的「原值 → 新值」。
+2. 改角色、啟用狀態、部門或主管時 **原因必填**；只改名稱可不填。按 **確認儲存**。
+3. 停用或改角色後，對方目前的登入會立即失效，需要重新登入（停用者不能再登入）。
+4. 系統會擋下：停用或降級自己；讓系統沒有任何啟用中的管理員；把仍是別人主管的人停用或改成員工（請先替他的部屬改主管）；主管形成循環（A 的主管是 B、B 的主管又是 A）；把員工指派到已停用的部門。
+5. 若顯示「已被其他管理員修改」，你的輸入會保留；按 **載入最新資料（會取代目前輸入）** 後再改。
+
+**E. 停用部門**：**部門** 分頁按 **編輯**，狀態改 **停用**、填原因、**確認儲存**。部門還有啟用中的員工時會被拒絕；已停用的員工可以保留在停用的部門，但重新啟用他時要同時改到啟用中的部門（或改成未指派）。

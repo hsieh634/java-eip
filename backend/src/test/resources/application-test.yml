@@ -2,6 +2,12 @@
 spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_TEST_NAME:renewflow_test}
+    # Spring 會快取多個測試 Context，每個都有自己的連線池。預設每個池常駐 10 條連線，
+    # T05 前置新增 Context 後總數超過 PostgreSQL 的 max_connections（100，開發後端另占 10）。
+    # 常駐只留 2 條、閒置 10 秒後釋放；上限仍是 10，並行測試能用的連線數不變。
+    hikari:
+      minimum-idle: 2
+      idle-timeout: 10000
   flyway:
     # 僅測試允許 clean；實際執行還有 TestFlywayConfig／TestDatabaseGuard 的資料庫名稱檢查把關
     clean-disabled: false

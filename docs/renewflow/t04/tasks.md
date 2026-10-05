@@ -1,6 +1,6 @@
 # Tasks：T04
 
-狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。證據見 `docs/learning/T04-projects-and-timesheets.md` 第 9 節。
+狀態：**已通過 ChatGPT 複審，結案**（第 2 輪後；複審證據的性質見 `version-log.md` 第 11 輪）。證據見 `docs/learning/T04-projects-and-timesheets.md` 第 9 節。
 
 | # | 工作 | 依賴 | 完成條件 | 狀態 |
 |---|---|---|---|---|
@@ -14,11 +14,11 @@
 | T04-8 | 針對性變異驗證（員工列鎖、版本、所有權、requestId） | 5 | 相應測試失敗、還原後通過 | ☑ |
 | T04-9 | 開發庫套用 V5，確認既有資料與定位設定保留 | 2 | 前後比對相同 | ☑ |
 | T04-10 | README、共用文件、version-log、學習文件 | 全部 | 文件完成 | ☑ |
-| — | ChatGPT 複審 | — | — | ☐ 等待中 |
+| — | ChatGPT 複審 | — | — | ☑ 已通過（第 2 輪後） |
 
 ## 第 1 輪複審（R1、R2）
 
-細節見 `review-round-1.md`；狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。
+細節見 `review-round-1.md`；狀態：**已通過 ChatGPT 複審**（R2 於第 1 輪被接受；R1 於第 2 輪結案）。
 
 | # | 工作 | 狀態 |
 |---|---|---|
@@ -30,7 +30,7 @@
 
 ## 第 2 輪複審（R1-A、R1-B）
 
-細節見 `review-round-2.md`；狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。
+細節見 `review-round-2.md`；狀態：**已通過 ChatGPT 複審，結案**。
 
 | # | 工作 | 狀態 |
 |---|---|---|

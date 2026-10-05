@@ -2,7 +2,7 @@
 
 審查基準：`00593e78ba4294c185a56ead7808ab5571c4b4fa`。上一輪的 R2（背景更新失敗保留草稿）已被接受；STMAX 初始化未發現阻擋問題。
 本輪只處理 R1 的兩個邊界。範圍：`frontend/src/pages/TimesheetPage.tsx` 與測試、文件；**不改後端、API、migration、共用元件或示範帳號**。
-狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。
+狀態：**已通過 ChatGPT 複審，結案**（複審證據的性質見 `version-log.md` 第 11 輪）。
 
 ## 1. 問題
 

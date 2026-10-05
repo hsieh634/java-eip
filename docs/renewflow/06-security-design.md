@@ -75,8 +75,12 @@ T03 起會有**寫入**型 API（打卡等）。若只依賴 Session 內的快�
 
 `/api/admin/projects/**` 沿用 ADMIN 規則（URL＋Service＋`ActiveAccountFilter`）。工時 API 只操作 Session 中的本人資料：SQL 以 `employee_id` 限定，他人紀錄一律 404；MANAGER、ADMIN 也看不到別人的工時。詳見 [`t04/06-security-design.md`](t04/06-security-design.md)。
 
+## T05 前置：組織與員工管理
+
+`/api/admin/departments/**`、`/api/admin/employees/**` 沿用 ADMIN 規則（URL＋Service＋`ActiveAccountFilter`）。ADMIN 不可停用或降級自己；至少保留一位啟用 ADMIN（並行時也成立）；停用或改角色後對方舊 Session 立即失效。初始密碼由 ADMIN 輸入、不 trim、不截斷、≤ 72 位元組、只存雜湊、不回傳也不記錄。**主管關係不授與任何資料範圍。**詳見 [`t05-foundation/06-security-design.md`](t05-foundation/06-security-design.md)。
+
 ## 已知限制
 
-- 無登入失敗鎖定、無密碼政策、無改密碼流程。
+- 無登入失敗鎖定、無密碼複雜度政策、無改密碼／重設密碼流程（T05 前置的初始密碼由管理員交付，沒有強制首次修改）。
 - Session 存在記憶體，重啟即失效；多機部署需外部 Session 儲存。
-- 無稽核紀錄。
+- 稽核：出勤（T03.1）、定位設定（T03.2）、組織（T05 前置）有各自只新增的歷程；登入／登出沒有稽核紀錄。

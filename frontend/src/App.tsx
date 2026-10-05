@@ -4,6 +4,7 @@ import { useHashView } from './navigation/useHashView'
 import { AdminAttendancePage } from './pages/AdminAttendancePage'
 import { AttendancePage } from './pages/AttendancePage'
 import { GeofenceSettingsPage } from './pages/GeofenceSettingsPage'
+import { OrganizationAdminPage } from './pages/OrganizationAdminPage'
 import { ProjectsAdminPage } from './pages/ProjectsAdminPage'
 import { TimesheetPage } from './pages/TimesheetPage'
 import { HomePage } from './pages/HomePage'
@@ -40,6 +41,7 @@ export default function App() {
           {view === 'admin-geofence' && <GeofenceSettingsPage user={state.user} />}
           {view === 'timesheets' && <TimesheetPage />}
           {view === 'admin-projects' && <ProjectsAdminPage user={state.user} />}
+          {view === 'admin-organization' && <OrganizationAdminPage user={state.user} />}
           {view === 'home' && <HomePage user={state.user} />}
         </AppShell>
       )

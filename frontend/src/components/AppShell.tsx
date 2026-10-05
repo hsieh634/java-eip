@@ -16,6 +16,14 @@ const PENDING_FEATURES = [
   { key: 'settings', label: '必要設定' },
 ] as const
 
+/** 只對 ADMIN 顯示的入口（隱藏入口不是安全機制；權限由後端 /api/admin/** 驗證）。 */
+const ADMIN_ITEMS: readonly { view: View; href: string; label: string }[] = [
+  { view: 'admin-attendance', href: '#/admin/attendance', label: '出勤管理' },
+  { view: 'admin-geofence', href: '#/admin/geofence', label: '定位打卡設定' },
+  { view: 'admin-projects', href: '#/admin/projects', label: '專案管理' },
+  { view: 'admin-organization', href: '#/admin/organization', label: '組織與員工' },
+]
+
 /** 登入後的共用框架：頂欄（品牌、使用者、登出）、側邊選單、登出失敗提示。 */
 export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser; view: View; children: ReactNode }>) {
   const { logout } = useAuth()
@@ -100,39 +108,18 @@ export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser;
                 工時回報
               </a>
             </li>
-            {user.role === 'ADMIN' && (
-              <li>
-                <a
-                  href="#/admin/attendance"
-                  className={view === 'admin-attendance' ? 'nav-item nav-item--active' : 'nav-item'}
-                  aria-current={view === 'admin-attendance' ? 'page' : undefined}
-                >
-                  出勤管理
-                </a>
-              </li>
-            )}
-            {user.role === 'ADMIN' && (
-              <li>
-                <a
-                  href="#/admin/geofence"
-                  className={view === 'admin-geofence' ? 'nav-item nav-item--active' : 'nav-item'}
-                  aria-current={view === 'admin-geofence' ? 'page' : undefined}
-                >
-                  定位打卡設定
-                </a>
-              </li>
-            )}
-            {user.role === 'ADMIN' && (
-              <li>
-                <a
-                  href="#/admin/projects"
-                  className={view === 'admin-projects' ? 'nav-item nav-item--active' : 'nav-item'}
-                  aria-current={view === 'admin-projects' ? 'page' : undefined}
-                >
-                  專案管理
-                </a>
-              </li>
-            )}
+            {user.role === 'ADMIN' &&
+              ADMIN_ITEMS.map((item) => (
+                <li key={item.view}>
+                  <a
+                    href={item.href}
+                    className={view === item.view ? 'nav-item nav-item--active' : 'nav-item'}
+                    aria-current={view === item.view ? 'page' : undefined}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
             {PENDING_FEATURES.map((f) => (
               <li key={f.key}>
                 <button type="button" className="nav-item" disabled>

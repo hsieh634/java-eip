@@ -839,3 +839,92 @@ a.btn {
   flex-direction: column;
   gap: 0.35rem;
 }
+
+/* ---------- T05 前置：組織與員工 ---------- */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  font: inherit;
+  min-height: 40px;
+  padding: 0.4rem 1rem;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab--active {
+  border-bottom-color: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modal--wide {
+  max-width: 640px;
+}
+
+.modal select,
+.range-form select {
+  font: inherit;
+  min-height: 40px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.modal .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 400;
+}
+
+.modal .checkbox input {
+  min-height: auto;
+}
+
+.change-summary {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafbff;
+}
+
+.change-list {
+  margin: 0.25rem 0;
+  padding-left: 1.2rem;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .tab {
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+
+  .modal select,
+  .range-form select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .pager .btn {
+    flex: 1 1 100px;
+  }
+}

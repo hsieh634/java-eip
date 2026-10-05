@@ -1,4 +1,4 @@
-# API 設計（T02；T03 出勤 API 見 [`t03/03-api-design.md`](t03/03-api-design.md)；T03.1 見 [`t03-1/04-api-design.md`](t03-1/04-api-design.md)；T03.2 定位打卡與設定見 [`t03-2/05-api-design.md`](t03-2/05-api-design.md)；T04 專案與工時見 [`t04/05-api-design.md`](t04/05-api-design.md)）
+# API 設計（T02；T03 出勤 API 見 [`t03/03-api-design.md`](t03/03-api-design.md)；T03.1 見 [`t03-1/04-api-design.md`](t03-1/04-api-design.md)；T03.2 定位打卡與設定見 [`t03-2/05-api-design.md`](t03-2/05-api-design.md)；T04 專案與工時見 [`t04/05-api-design.md`](t04/05-api-design.md)；T05 前置的部門與員工管理見 [`t05-foundation/05-api-design.md`](t05-foundation/05-api-design.md)）
 
 基底路徑 `/api`；請求與回應皆為 JSON（UTF-8）。
 
