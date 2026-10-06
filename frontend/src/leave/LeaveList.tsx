@@ -26,7 +26,10 @@ export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, sh
   const [draft, setDraft] = useState({ status: initialStatus, from: '', to: '' })
   const [query, setQuery] = useState<ListQuery>({ status: initialStatus, from: '', to: '', page: 0 })
   const [formError, setFormError] = useState<string | null>(null)
-  const list = useLoad(() => load(query), `${loadKey}:${JSON.stringify(query)}:${extraKey}:${refreshSeq}`)
+  // 每次有效的「查詢」都遞增：條件完全相同也會產生新的 key，useLoad 因此重新讀取（T05 複審 R2）。
+  // key 一變，舊請求的回應（成功、失敗或 401）都會被 useLoad 丟棄，不會覆蓋新結果
+  const [searchSeq, setSearchSeq] = useState(0)
+  const list = useLoad(() => load(query), `${loadKey}:${JSON.stringify(query)}:${extraKey}:${refreshSeq}:${searchSeq}`)
 
   function apply(event: FormEvent) {
     event.preventDefault()
@@ -34,6 +37,7 @@ export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, sh
     if (draft.from && draft.from > draft.to) return setFormError('起日不可晚於迄日。')
     setFormError(null)
     setQuery({ ...draft, page: 0 })
+    setSearchSeq((n) => n + 1)
   }
 
   const ready = list.state.kind === 'ready' ? list.state.data : null

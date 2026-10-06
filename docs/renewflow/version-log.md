@@ -175,3 +175,26 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 開發庫：重啟前已說明原因與影響，之後套用 V7。既有 11 張表 md5 逐列相同，新表 0 筆。STMAX 帳號與組織初始化皆「已符合」，沒有寫入。**沒有**代為建立 Max → Iris 設定，也沒有送出任何假單。
 - 狀態：**T05 作者自測完成，等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t05/`；學習文件：`docs/learning/T05-leave-and-approval.md`。
+
+## 第 13 輪：T05 第 1 輪複審修正（R1～R3）
+
+- 審查基準：`77dac92235c2f85388ece4c33e7ce1b2dcc53a92`。
+- **ChatGPT 本輪證據的性質**：
+  - 核對指定 SHA、實際程式、V7、規格與測試設計；以實際前端函式與 API 函式做 12 項受控檢查，確認三個問題。
+  - hooks、fetch 等使用受控替身，沒有完整重跑瀏覽器 E2E 或 Spring／PostgreSQL 整合測試。
+  - 310 項後端測試、12 支 E2E、build／lint 仍是作者自測證據。
+- 本批 commit：標題為 `fix: T05 review round 1 ...` 的 commit，完整 SHA 見交付報告。
+- **只修改前端**：
+  - R1：新增 `leave/submitOutcome.ts`。成功回應在執行期驗證；POST 送出後凡是無法確認的結果（含 JSON 損壞、本文讀取中斷、缺欄位、requestId／內容不符）都保存原快照並鎖定。`submitLeave` 回傳 `unknown`。
+  - R2：`LeaveList` 每次有效的查詢都遞增 `searchSeq`。
+  - R3：`SettingForm` 對失效的原指定審核人提供 disabled 保留選項與警告。
+- **沒有修改**：後端、API、V1～V7 migration、共用元件（`http.ts`、`useLoad`、認證）。新增相依套件：**無**。
+- 測試：新增 `leave-review.mjs`（`npm run e2e:leave-review`）。
+  - 用最終版測試跑基準程式：24／43。R1、R2、R3 的行為檢查失敗；R1-0（新模組不存在）與 R1-6（前置情境無法成立）不算舊缺陷證據。
+  - 修正後：46／46。
+  - 回歸：leave 56、timesheets 49、timesheets-review 24、timesheets-retry 25、organization 54。lint、build 通過。
+  - 後端 310 項沿用上一輪證據（本輪沒有後端變更）；其他 7 支 E2E 本輪沒有重跑。
+- 開發環境：沒有重啟開發後端，沒有操作開發庫。測試過程中曾有一次腳本崩潰留下隔離堆疊（8081／5174），已確認是本次的 e2e 行程並終止；8080／5173 沒有動。
+- 觀察（本輪不修改）：工時表單 `TimesheetPage` 的結果判定與請假的 R1 原寫法相同，可能有同類問題，記錄於學習文件練習題。
+- 狀態：**T05 第 1 輪修正作者自測完成，等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t05/review-round-1.md`；學習文件：`docs/learning/T05-review-fixes.md`。

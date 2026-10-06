@@ -8,12 +8,14 @@ import {
   withdrawLeave,
   type LeaveDetail,
   type LeaveRequest,
+  type LeaveStatus,
   type LeaveSubmission,
   type LeaveType,
 } from '../api/leave'
 import { useApiErrorMessage } from '../auth/useApiErrorMessage'
 import { LeaveDetailDialog } from '../leave/LeaveDetailDialog'
 import { LeaveList } from '../leave/LeaveList'
+import { checkSubmitResult, isUnconfirmed } from '../leave/submitOutcome'
 import { APPROVER_SOURCE_LABEL, durationText, END_TIMES, LEAVE_TYPE_LABEL, minutesOfDay, START_TIMES } from '../leave/labels'
 import { newRequestId } from '../lib/requestId'
 import { taipeiToday } from '../lib/time'
@@ -133,6 +135,8 @@ function ApproverPreviewBox({ refreshSeq }: Readonly<{ refreshSeq: number }>) {
  * - unknown：結果不明（網路中斷、回應遺失、5xx）。表單鎖定在剛才的內容，requestId 與它綁在一起；
  *   只能「重新送出原內容」，或看過警告後「放棄追蹤」。
  * 「原提交是否尚未確認」由未確認快照（pending）是否存在決定；重試被拒絕（403、409…）不能證明原提交不存在，快照保留。
+ * 「無法確認」不只是網路錯誤與 5xx：成功狀態下讀不到本文、JSON 損壞、內容缺欄位或 requestId／內容對不上，
+ * 也都可能發生在後端已建立之後（T05 複審 R1，見 leave/submitOutcome.ts）。
  * 第一次送出就被明確拒絕（400／409）代表沒有建立任何東西 → 回到 editing 讓使用者修改。
  * 401 走既有的登入失效流程（回登入頁、表單卸載），不會以別的帳號重送。不跨重新整理保存。
  */
@@ -176,19 +180,21 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
     onStart()
     const life = lifetime.current
     try {
-      const result = await submitLeave({ ...values, requestId })
+      // 先驗證成功回應「就是這一次提交」，通過後才提示成功、換新表單（R1）
+      const result = checkSubmitResult(await submitLeave({ ...values, requestId }), requestId, values)
       if (!life.alive) return // 已切頁：不更新畫面（POST 已送出，無法撤回）
       onDone(
         result.replayed
-          ? `原提交已經建立（申請 #${result.request.id}，${statusText(result.request)}），沒有重複新增。`
-          : `已送出請假申請 #${result.request.id}，等待 ${result.request.approver.displayName} 審核。`,
+          ? `原提交已經建立（申請 #${result.id}，${STATUS_TEXT[result.status]}），沒有重複新增。`
+          : `已送出請假申請 #${result.id}，等待 ${result.approverName} 審核。`,
       )
     } catch (e) {
       if (!life.alive) return
       submitting.current = false
-      const uncertain = e instanceof ApiError && (e.status === 0 || e.status >= 500)
+      // 網路錯誤、5xx、成功回應讀不到／解析失敗／內容對不上：POST 已送出，都不能當成「後端沒有建立」
+      const uncertain = isUnconfirmed(e)
       if (retrying) {
-        const why = uncertain ? '仍無法連線或伺服器發生錯誤' : messageOf(e)
+        const why = uncertain ? '仍無法確認結果（連線中斷、伺服器錯誤或回應內容無法使用）' : messageOf(e)
         setPhase('unknown')
         setError(`本次重新送出沒有成功：${why}。原提交的結果仍未確認，表單維持鎖定為原內容：可以再按「重新送出原內容」，或按「放棄追蹤，開始新的一筆」。`)
         onListStale()
@@ -198,7 +204,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
         setPending(values)
         setPhase('unknown')
         setError(
-          '無法確認原提交是否已建立（網路或伺服器問題），已重新查詢清單。表單已鎖定為剛才送出的內容：按「重新送出原內容」會用同一個識別碼確認，不會重複建立。',
+          '無法確認原提交是否已建立（連線中斷、伺服器錯誤或回應內容無法使用），已重新查詢清單。表單已鎖定為剛才送出的內容：按「重新送出原內容」會用同一個識別碼確認，不會重複建立。',
         )
         onListStale()
         return
@@ -294,9 +300,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
   )
 }
 
-function statusText(r: LeaveRequest): string {
-  return { PENDING: '待審', APPROVED: '已核准', REJECTED: '已退回', WITHDRAWN: '已撤回' }[r.status]
-}
+const STATUS_TEXT: Record<LeaveStatus, string> = { PENDING: '待審', APPROVED: '已核准', REJECTED: '已退回', WITHDRAWN: '已撤回' }
 
 /** 撤回待審申請：先確認；版本或狀態已變更時不假裝成功，提示重新載入。 */
 function WithdrawAction({ detail, onDone, onReload }: Readonly<{ detail: LeaveDetail; onDone: () => void; onReload: () => void }>) {

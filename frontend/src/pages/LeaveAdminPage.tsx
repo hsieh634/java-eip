@@ -417,7 +417,9 @@ function SettingEditor({ employeeId, managers, onSaved }: Readonly<{ employeeId:
         <dt>直屬主管</dt>
         <dd>{s.manager?.displayName ?? '（無）'}</dd>
         <dt>目前指定</dt>
-        <dd data-testid="setting-current">{s.designatedApprover?.displayName ?? '（未指定，採直屬主管）'}</dd>
+        <dd data-testid="setting-current">
+          {s.designatedApprover ? `${s.designatedApprover.displayName}（${s.designatedApprover.employeeNo}）${s.designatedApprover.valid ? '' : '（已無效）'}` : '（未指定，採直屬主管）'}
+        </dd>
         <dt>目前送出時的審核人</dt>
         <dd>{effectiveText(s)}</dd>
       </dl>
@@ -448,13 +450,24 @@ function SettingForm({
   const [error, setError] = useState<string | null>(null)
   const [conflict, setConflict] = useState(false)
   const choices = managers.filter((m) => m.id !== setting.employee.id)
-  const before = setting.designatedApprover?.displayName ?? '（未指定）'
-  const after = approverId === '' ? '（未指定，採直屬主管）' : choices.find((m) => String(m.id) === approverId)?.displayName ?? `#${approverId}`
+  const original = setting.designatedApprover
+  // 原指定審核人若已停用或降成 EMPLOYEE，就不在「有效審核人」選項中。為了讓受控的 value 有對應選項，
+  // 另外列出一個「目前指定（已無效）」的保留選項：它只用來表示原值（disabled，不能被新選取），
+  // 管理員可以直接改選「不指定」或另一位有效審核人（T05 複審 R3）
+  const originalMissing = original !== null && !choices.some((m) => m.id === original.id)
+  const labelOf = (id: string): string => {
+    if (id === '') return '（未指定，採直屬主管）'
+    if (original && String(original.id) === id) return `${original.displayName}（${original.employeeNo}）${original.valid ? '' : '（已無效）'}`
+    const m = choices.find((x) => String(x.id) === id)
+    return m ? `${m.displayName}（${m.employeeNo}）` : '（不在可選清單中）'
+  }
+  const before = original ? labelOf(String(original.id)) : '（未指定）'
+  const after = labelOf(approverId)
 
   async function save(event: FormEvent) {
     event.preventDefault()
     if (busy) return
-    if ((setting.designatedApprover ? String(setting.designatedApprover.id) : '') === approverId) return setError('內容與目前相同，沒有需要儲存的變更。')
+    if ((original ? String(original.id) : '') === approverId) return setError('內容與目前相同，沒有需要儲存的變更。')
     if (!reason.trim()) return setError('修改原因必填。')
     setBusy(true)
     setError(null)
@@ -476,6 +489,11 @@ function SettingForm({
       <label htmlFor="setting-approver">指定請假審核人</label>
       <select id="setting-approver" value={approverId} onChange={(e) => setApproverId(e.target.value)}>
         <option value="">不指定（採直屬主管）</option>
+        {originalMissing && original && (
+          <option value={original.id} disabled data-testid="setting-original-invalid">
+            目前指定：{original.displayName}（{original.employeeNo}）{original.valid ? '' : '（已無效）'}
+          </option>
+        )}
         {choices.map((m) => (
           <option key={m.id} value={m.id}>
             {m.displayName}（{m.employeeNo}）
@@ -494,7 +512,12 @@ function SettingForm({
         <button type="submit" className="btn btn--primary" disabled={busy}>
           {busy ? '儲存中…' : '確認儲存'}
         </button>
-        {conflict && (
+        {originalMissing && original && !original.valid && (
+        <p className="banner banner--warn small" data-testid="setting-invalid-warning">
+          目前指定的 {original.displayName} 已停用或不是主管／管理員，這位員工目前無法送出請假。請改選「不指定（採直屬主管）」或另一位有效審核人；系統不會自動清除。
+        </p>
+      )}
+      {conflict && (
           <button type="button" className="btn" onClick={onReloadLatest}>
             載入最新設定（會取代目前輸入）
           </button>

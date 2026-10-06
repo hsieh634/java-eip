@@ -102,9 +102,11 @@ export interface LeaveSubmission {
   reason: string
 }
 
-/** 201＝新建立；200 且 replayed＝相同 requestId＋相同內容的重送（回傳原申請，沒有新增）。 */
-export const submitLeave = (body: LeaveSubmission & { requestId: string }) =>
-  api<{ replayed: boolean; request: LeaveRequest }>('/api/leave/me', { method: 'POST', body })
+/**
+ * 201＝新建立；200 且 replayed＝相同 requestId＋相同內容的重送（回傳原申請，沒有新增）。
+ * 回傳 unknown：網路資料沒有經過驗證前不能當成 LeaveRequest 使用，呼叫端必須以 leave/submitOutcome.checkSubmitResult 驗證（T05 複審 R1）。
+ */
+export const submitLeave = (body: LeaveSubmission & { requestId: string }) => api<unknown>('/api/leave/me', { method: 'POST', body })
 export const withdrawLeave = (id: number, expectedVersion: number, reason: string | null) =>
   api<LeaveDetail>(`/api/leave/me/${id}/withdraw`, { method: 'POST', body: { expectedVersion, reason } })
 

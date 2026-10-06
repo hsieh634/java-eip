@@ -18,5 +18,6 @@
 | T5-12 | 全部後端測試、全部 E2E、build、lint | 全部 | 全部通過 | 學習文件第 9 節 | ☑ |
 | T5-13 | 開發庫套用 V7（先說明、前後比對）；唯讀檢查 STMAX 帳號 | 4 | 既有表相同；預計審核人正確 | `verification.md` | ☑ |
 | T5-14 | README、共用文件、STMAX、roadmap、version-log、學習文件 | 全部 | 文件完成 | — | ☑ |
-| — | Review（ChatGPT 複審） | — | — | — | ☐ 等待中 |
+| T5-15 | 第 1 輪複審修正 R1～R3（[`review-round-1.md`](review-round-1.md)） | 全部 | `leave-review.mjs` 在基準版本失敗、修正後通過 | `verification.md` 第 6 節 | ☑ |
+| — | Review（ChatGPT 複審；第 1 輪修正後） | — | — | — | ☐ 等待中 |
 | — | Archive | Review | 複審通過後整理 | — | ☐ 未開始 |

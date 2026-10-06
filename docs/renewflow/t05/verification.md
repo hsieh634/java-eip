@@ -38,8 +38,23 @@ Max → Iris 的指定設定**沒有**代為建立。由 Max 依 README 第 14 �
 
 ## 4. Review
 
-尚未進行，等待 ChatGPT 複審。
+- **第 1 輪**：ChatGPT 提出 R1～R3，以實際前端函式與 API 函式做 12 項受控檢查。檢查使用替身，沒有重跑瀏覽器 E2E 或 Spring／PostgreSQL 整合測試。修正見 [`review-round-1.md`](review-round-1.md) 與本文件第 6 節。
+- 修正後等待 ChatGPT 複審。
 
 ## 5. Archive
 
 複審通過後再整理。
+
+## 6. 第 1 輪複審修正的驗證
+
+**修改範圍**：只有前端（`submitOutcome.ts`、`api/leave.ts`、`LeavePage.tsx`、`LeaveList.tsx`、`LeaveAdminPage.tsx`），另新增 E2E `leave-review.mjs`。後端、API、V1～V7、共用元件都沒有修改。
+
+| 項目 | 結果 |
+|---|---|
+| `leave-review.mjs`，基準程式（暫時 stash 修改，用最終版測試執行） | 24／43；R1、R2、R3 的行為檢查失敗。R1-0（新模組不存在）與 R1-6（前置情境無法成立）不算舊缺陷證據 |
+| `leave-review.mjs`，修正後 | 46／46 |
+| `npm run lint`、`npm run build` | 通過 |
+| 回歸：見學習文件 `T05-review-fixes.md` 與 version-log 第 13 輪 | — |
+| 後端 310 項 | **沿用**上一輪證據；後端沒有修改，本輪沒有重跑 |
+| 開發環境 | 純前端修改，沒有重啟開發後端，也沒有操作開發庫 |
+
