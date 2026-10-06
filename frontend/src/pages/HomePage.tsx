@@ -7,17 +7,12 @@ const ROLE_LABEL: Record<Role, string> = {
   ADMIN: '管理員',
 }
 
-/** 尚未實作的卡片。不顯示任何假統計，只標示預計開放的階段。 */
-const PENDING_CARDS = [
-  { title: '待審核', stage: 'T05' },
-] as const
-
 /** 首頁內容（頂欄與側邊選單在 AppShell）。今日打卡卡片顯示真實資料。 */
 export function HomePage({ user }: Readonly<{ user: CurrentUser }>) {
   return (
     <>
       <h1>首頁</h1>
-      <p className="muted">你好，{user.displayName}。以下功能將依階段陸續開放。</p>
+      <p className="muted">你好，{user.displayName}。左側選單可以進入各項功能。</p>
 
       <div className="cards">
         <section className="card" aria-labelledby="card-me">
@@ -42,13 +37,20 @@ export function HomePage({ user }: Readonly<{ user: CurrentUser }>) {
           </a>
         </section>
 
-        {PENDING_CARDS.map((c) => (
-          <section key={c.title} className="card card--pending" aria-label={`${c.title}（尚未啟用）`}>
-            <h2>{c.title}</h2>
-            <p className="muted">尚未啟用</p>
-            <p className="muted small">預計於 {c.stage} 開放，目前沒有資料可顯示。</p>
-          </section>
-        ))}
+        <section className="card" aria-labelledby="card-leave">
+          <h2 id="card-leave">請假</h2>
+          <p className="muted">送出事假、病假或特休申請，查看審核結果；待審中的申請可以撤回。</p>
+          <div className="actions">
+            <a className="btn" href="#/leave">
+              前往請假
+            </a>
+            {user.role !== 'EMPLOYEE' && (
+              <a className="btn" href="#/leave/approvals">
+                請假審核
+              </a>
+            )}
+          </div>
+        </section>
       </div>
     </>
   )

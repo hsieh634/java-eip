@@ -288,7 +288,7 @@ class OrganizationIntegrationTest extends OrganizationTestBase {
     }
 
     @Test
-    @DisplayName("O-09 最後一位 ADMIN：其他 ADMIN 已被降級後，依舊身份送出的降級 → 409 LAST_ADMIN（Service 鎖內重新計算）")
+    @DisplayName("O-09 舊身分：dave 已被降級後，依降級前的 Session 快照送出的降級 → 取鎖後重新確認操作者 → 401，資料不變（T05 起）")
     void lastAdminIsProtected() {
         TestBrowser carolB = loginAs("carol");
         EmployeeUserDetails daveSnapshot = new EmployeeUserDetails(dave); // dave 的請求已通過 Filter（當時還是 ADMIN）
@@ -297,10 +297,11 @@ class OrganizationIntegrationTest extends OrganizationTestBase {
         Form demoteCarol = form(carol.getId()).role("MANAGER").reason("互相降級");
         assertThatThrownBy(() -> employeeAdminService.update(daveSnapshot, carol.getId(), new UpdateEmployeeRequest(
                 demoteCarol.displayName(), Role.MANAGER, true, null, null, demoteCarol.expectedVersion(), "互相降級")))
-                .isInstanceOfSatisfying(ApiException.class, ex -> assertThat(ex.getCode()).isEqualTo("LAST_ADMIN"));
-        assertThatThrownBy(() -> employeeAdminService.update(daveSnapshot, carol.getId(), new UpdateEmployeeRequest(
-                demoteCarol.displayName(), Role.ADMIN, false, null, null, demoteCarol.expectedVersion(), "停用")))
-                .isInstanceOfSatisfying(ApiException.class, ex -> assertThat(ex.getCode()).isEqualTo("LAST_ADMIN"));
+                .isInstanceOfSatisfying(ApiException.class, ex -> {
+                    assertThat(ex.getStatus().value()).isEqualTo(401);
+                    assertThat(ex.getCode()).isEqualTo("UNAUTHENTICATED");
+                });
+        assertThat(empVersion(carol.getId())).isZero();
         assertThat(jdbc.queryForObject("select count(*) from employee where role = 'ADMIN' and enabled", Integer.class)).isEqualTo(1);
     }
 

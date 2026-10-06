@@ -2,7 +2,7 @@
 
 > **T05 前置子任務**（T01～T06 編號不變；不包含請假）。
 
-狀態：**已實作／作者自測完成／等待 ChatGPT 複審**。證據見 `docs/learning/T05-foundation-organization-and-employees.md` 第 8 節。
+狀態：**已通過 ChatGPT 複審，結案**（複審證據的性質見 `version-log.md` 第 12 輪）。證據見 `docs/learning/T05-foundation-organization-and-employees.md` 第 8 節。
 
 | # | 工作 | 依賴 | 完成條件 | 狀態 |
 |---|---|---|---|---|
@@ -18,4 +18,4 @@
 | F-10 | 全部後端測試；全部 E2E 回歸 | 全部 | 全部通過 | ☑ |
 | F-11 | 開發庫套用 V6 與 STMAX 組織（先說明、前後比對、重啟冪等） | 2、6 | 比對結果符合預期 | ☑ |
 | F-12 | README、共用文件、STMAX 文件、roadmap、version-log、學習文件 | 全部 | 文件完成 | ☑ |
-| — | ChatGPT 複審 | — | — | ☐ 等待中 |
+| — | ChatGPT 複審 | — | — | ☑ 已通過（見 version-log 第 12 輪的證據說明） |

@@ -79,6 +79,10 @@ T03 起會有**寫入**型 API（打卡等）。若只依賴 Session 內的快�
 
 `/api/admin/departments/**`、`/api/admin/employees/**` 沿用 ADMIN 規則（URL＋Service＋`ActiveAccountFilter`）。ADMIN 不可停用或降級自己；至少保留一位啟用 ADMIN（並行時也成立）；停用或改角色後對方舊 Session 立即失效。初始密碼由 ADMIN 輸入、不 trim、不截斷、≤ 72 位元組、只存雜湊、不回傳也不記錄。**主管關係不授與任何資料範圍。**詳見 [`t05-foundation/06-security-design.md`](t05-foundation/06-security-design.md)。
 
+## T05：請假
+
+申請人取自 Session；本人只看自己的（`employee_id`），審核人只看指派給自己的（`approver_id`），其他一律 404。ADMIN 可查詢與改派，但核准／退回必須是目前審核人；不能改派自己的申請；審核人不能是申請人（資料庫 CHECK）。所有請假寫入取組織鎖後重新確認操作者（等待期間被停用或降級 → 401）。詳見 [`t05/06-security-design.md`](t05/06-security-design.md)。
+
 ## 已知限制
 
 - 無登入失敗鎖定、無密碼複雜度政策、無改密碼／重設密碼流程（T05 前置的初始密碼由管理員交付，沒有強制首次修改）。

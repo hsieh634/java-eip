@@ -65,5 +65,5 @@ java-eip/
 | T03.2 | geofence（定位設定、定位關卡）；attendance（打卡證據） | 打卡交易內以 `FOR SHARE` 取得設定快照；見 [`t03-2/03-architecture.md`](t03-2/03-architecture.md) |
 | T04 | project、timesheet | 專案管理（ADMIN）與本人工時；員工列鎖保證每日上限；見 [`t04/03-architecture.md`](t04/03-architecture.md) |
 | T05 前置 | organization（部門、員工管理、直屬主管、組織歷程） | 所有組織寫入先取同一把交易級 advisory lock；`Employee` 新增唯讀的組織欄位；見 [`t05-foundation/03-architecture.md`](t05-foundation/03-architecture.md) |
-| T05 | leave | 狀態轉移、以 T05 前置的直屬主管為審核關係、樂觀鎖 |
+| T05 | leave（請假申請、審核、改派、指定請假審核人） | 狀態機＋條件 UPDATE；與組織寫入共用 `OrganizationLock`，取鎖後重新確認操作者；見 [`t05/03-architecture.md`](t05/03-architecture.md) |
 | T06 | dashboard、設定 | 首頁彙整取代「尚未啟用」卡片；同源部署文件 |

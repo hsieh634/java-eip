@@ -1,4 +1,4 @@
-# 資料模型（T01；T03 的 `attendance` 表見 [`t03/02-data-model.md`](t03/02-data-model.md)；T03.1 見 [`t03-1/03-data-model.md`](t03-1/03-data-model.md)；T03.2 的定位設定、設定歷程、打卡事件見 [`t03-2/04-data-model.md`](t03-2/04-data-model.md)；T04 的專案與工時見 [`t04/04-data-model.md`](t04/04-data-model.md)；T05 前置的部門、主管、組織歷程見 [`t05-foundation/04-data-model.md`](t05-foundation/04-data-model.md)）
+# 資料模型（T01；T03 的 `attendance` 表見 [`t03/02-data-model.md`](t03/02-data-model.md)；T03.1 見 [`t03-1/03-data-model.md`](t03-1/03-data-model.md)；T03.2 的定位設定、設定歷程、打卡事件見 [`t03-2/04-data-model.md`](t03-2/04-data-model.md)；T04 的專案與工時見 [`t04/04-data-model.md`](t04/04-data-model.md)；T05 前置的部門、主管、組織歷程見 [`t05-foundation/04-data-model.md`](t05-foundation/04-data-model.md)；T05 的請假見 [`t05/04-data-model.md`](t05/04-data-model.md)）
 
 Migration：`backend/src/main/resources/db/migration/V1__create_employee.sql`
 

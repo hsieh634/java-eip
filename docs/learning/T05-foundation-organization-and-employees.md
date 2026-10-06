@@ -193,3 +193,11 @@ private Long managerId;
 - 「停用部門主管」時要守住哪些新的不變條件？
 - 原本的組織鎖還夠不夠？為什麼？
 - 「自動」決定主管這件事，與本批「不自動改派」的原則有什麼衝突？你會怎麼取捨？
+
+---
+
+> **T05 後續變更（2026-10-06）**：
+> - `OrganizationLock` 新增 `acquireFor(actor)`：取得鎖之後會重新確認操作者仍存在、仍啟用、角色與 Session 快照相同。部門與員工的寫入改用它。
+> - 因此 O-09 改為驗證「依舊身分送出 → 401」。`LAST_ADMIN` 退為第二道防線，由 `OrganizationLastAdminDefenseTest`（O-09b，以 Spy 模擬操作者檢查失效）驗證。
+> - 這把鎖的範圍也擴大到請假寫入。
+> - 詳見 `docs/learning/T05-leave-and-approval.md`。

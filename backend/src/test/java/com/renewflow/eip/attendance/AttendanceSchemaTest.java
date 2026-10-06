@@ -43,7 +43,7 @@ class AttendanceSchemaTest extends AttendanceTestBase {
     void cleanDatabaseHasV2() {
         List<String> versions = jdbc.queryForList(
                 "select version from flyway_schema_history where success order by installed_rank", String.class);
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7");
 
         List<String> constraints = jdbc.queryForList(
                 "select conname from pg_constraint where conrelid = 'attendance'::regclass", String.class);
@@ -119,7 +119,7 @@ class AttendanceSchemaTest extends AttendanceTestBase {
             assertThat(jdbc.queryForObject("select count(*) from " + schema + ".employee where username = 'legacy'", Integer.class))
                     .as("既有員工資料保留").isEqualTo(1);
             assertThat(jdbc.queryForList("select version from " + schema + ".flyway_schema_history where success and version is not null order by installed_rank",
-                    String.class)).containsExactly("1", "2", "3", "4", "5", "6");
+                    String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7");
             // 升級後新表可用，且外鍵指向既有員工
             jdbc.update("insert into " + schema + ".attendance (employee_id, work_date, clock_in_at)"
                     + " select id, date '2026-10-01', now() from " + schema + ".employee where username = 'legacy'");

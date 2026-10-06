@@ -129,7 +129,7 @@ public class EmployeeAdminService {
         String reason = OrganizationRules.normalizeReason(body.reason());
         Role role = body.role();
 
-        lock.acquire();
+        lock.acquireFor(actor);
         Department department = body.departmentId() == null ? null : requireAssignableDepartment(body.departmentId());
         Employee manager = body.managerId() == null ? null : requireValidManager(body.managerId());
         Instant now = now();
@@ -161,8 +161,8 @@ public class EmployeeAdminService {
         Long departmentId = body.departmentId();
         Long managerId = body.managerId();
 
-        // 從這裡開始到交易結束，其他組織寫入都在排隊；下面讀到的就是最新且不會被別人改的狀態
-        lock.acquire();
+        // 從這裡開始到交易結束，其他組織／請假寫入都在排隊；取鎖後先重新確認操作者仍有效（等待期間可能被停用或降級）
+        lock.acquireFor(actor);
         Employee current = employeeRepository.findById(id).orElseThrow(OrganizationRules::employeeNotFound);
         if (current.getVersion() != body.expectedVersion()) {
             throw changed();
@@ -220,7 +220,8 @@ public class EmployeeAdminService {
             }
         }
 
-        // 5. 至少保留一位啟用中的 ADMIN（同時降級兩位 ADMIN 時，第二個會在鎖內看到第一個的結果而被擋下）
+        // 5. 至少保留一位啟用中的 ADMIN。T05 起取鎖後會先確認操作者仍是啟用的 ADMIN（互相降級時，後到者在那一步就得到 401），
+        //    這裡保留為第二道防線（例如操作者檢查被誤刪時）
         boolean wasActiveAdmin = current.isEnabled() && current.getRole() == Role.ADMIN;
         boolean staysActiveAdmin = enabled && role == Role.ADMIN;
         if (wasActiveAdmin && !staysActiveAdmin && employeeRepository.countOtherActiveAdmins(id) == 0) {

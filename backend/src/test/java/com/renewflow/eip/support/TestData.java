@@ -16,9 +16,10 @@ public final class TestData {
      * 重新建立 V4 的預設值（關閉、未設定中心、100 公尺、上下班都限制）。
      * T04：專案與工時（工時引用員工與專案）一起清空。
      * T05 前置：組織歷程（只能新增）與部門一起清空（員工引用部門）。
+     * T05：請假歷程、申請、指定審核人設定一起清空。
      */
     public static void reset(JdbcTemplate jdbc) {
-        jdbc.execute("truncate table organization_history, timesheet_entry, project, attendance_clock_event, geofence_setting_history,"
+        jdbc.execute("truncate table leave_history, leave_request, leave_approver_setting, organization_history, timesheet_entry, project, attendance_clock_event, geofence_setting_history,"
                 + " geofence_setting, attendance_history, attendance_request, attendance, employee, department");
         jdbc.execute("insert into geofence_setting (id) values (1)");
     }

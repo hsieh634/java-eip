@@ -12,9 +12,18 @@ const ROLE_LABEL: Record<Role, string> = {
 
 /** 尚未實作的功能。只列出名稱與預計階段，不顯示任何假資料。 */
 const PENDING_FEATURES = [
-  { key: 'leave', label: '請假申請' },
   { key: 'settings', label: '必要設定' },
 ] as const
+
+const ALL_ROLES: readonly Role[] = ['EMPLOYEE', 'MANAGER', 'ADMIN']
+
+/** 一般入口：請假審核只對 MANAGER、ADMIN 顯示（隱藏入口不是安全機制；資料範圍由後端驗證）。 */
+const NAV_ITEMS: readonly { view: View; href: string; label: string; roles: readonly Role[] }[] = [
+  { view: 'attendance', href: '#/attendance', label: '出勤打卡', roles: ALL_ROLES },
+  { view: 'timesheets', href: '#/timesheets', label: '工時回報', roles: ALL_ROLES },
+  { view: 'leave', href: '#/leave', label: '請假', roles: ALL_ROLES },
+  { view: 'leave-approvals', href: '#/leave/approvals', label: '請假審核', roles: ['MANAGER', 'ADMIN'] },
+]
 
 /** 只對 ADMIN 顯示的入口（隱藏入口不是安全機制；權限由後端 /api/admin/** 驗證）。 */
 const ADMIN_ITEMS: readonly { view: View; href: string; label: string }[] = [
@@ -22,6 +31,7 @@ const ADMIN_ITEMS: readonly { view: View; href: string; label: string }[] = [
   { view: 'admin-geofence', href: '#/admin/geofence', label: '定位打卡設定' },
   { view: 'admin-projects', href: '#/admin/projects', label: '專案管理' },
   { view: 'admin-organization', href: '#/admin/organization', label: '組織與員工' },
+  { view: 'admin-leave', href: '#/admin/leave', label: '請假管理' },
 ]
 
 /** 登入後的共用框架：頂欄（品牌、使用者、登出）、側邊選單、登出失敗提示。 */
@@ -90,24 +100,13 @@ export function AppShell({ user, view, children }: Readonly<{ user: CurrentUser;
                 首頁
               </a>
             </li>
-            <li>
-              <a
-                href="#/attendance"
-                className={view === 'attendance' ? 'nav-item nav-item--active' : 'nav-item'}
-                aria-current={view === 'attendance' ? 'page' : undefined}
-              >
-                出勤打卡
-              </a>
-            </li>
-            <li>
-              <a
-                href="#/timesheets"
-                className={view === 'timesheets' ? 'nav-item nav-item--active' : 'nav-item'}
-                aria-current={view === 'timesheets' ? 'page' : undefined}
-              >
-                工時回報
-              </a>
-            </li>
+            {NAV_ITEMS.filter((item) => item.roles.includes(user.role)).map((item) => (
+              <li key={item.view}>
+                <a href={item.href} className={view === item.view ? 'nav-item nav-item--active' : 'nav-item'} aria-current={view === item.view ? 'page' : undefined}>
+                  {item.label}
+                </a>
+              </li>
+            ))}
             {user.role === 'ADMIN' &&
               ADMIN_ITEMS.map((item) => (
                 <li key={item.view}>

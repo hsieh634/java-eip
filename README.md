@@ -1,7 +1,7 @@
 # TeamPortal（企業員工入口平台）
 
 Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlow Engineering Method v2**（開發方法名稱）建立。
-**目前進度：T01～T04＋T05 前置**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報；T05 前置：最小組織與員工管理）。T05 請假尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
+**目前進度：T01～T05**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報、最小組織與員工管理、請假申請與主管審核）。T06 尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
 
 > 命名說明：產品顯示名稱是 TeamPortal；Repository（`java-eip`）、資料夾、Java package（`com.renewflow.eip`）、資料庫、容器與環境變數名稱沿用既有設定。
 
@@ -13,9 +13,10 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
 | T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（複審：[第 1 輪](docs/renewflow/t04/review-round-1.md)、[第 2 輪](docs/renewflow/t04/review-round-2.md)） |
 | T05 前置：組織與員工規格 | [docs/renewflow/t05-foundation/](docs/renewflow/t05-foundation/) |
+| T05 請假申請與主管審核規格 | [docs/renewflow/t05/](docs/renewflow/t05/) |
 | 產品方向、路線圖 | [product-direction.md](docs/renewflow/product-direction.md)、[roadmap.md](docs/renewflow/roadmap.md) |
 | STMAX 示範情境（虛構公司與帳號） | [demo-stmax.md](docs/renewflow/demo-stmax.md) |
-| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T05-foundation-organization-and-employees.md](docs/learning/T05-foundation-organization-and-employees.md)；T04 第 2 輪：[T04-retry-state-boundaries.md](docs/learning/T04-retry-state-boundaries.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
+| 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T05-leave-and-approval.md](docs/learning/T05-leave-and-approval.md)；T05 前置：[T05-foundation-organization-and-employees.md](docs/learning/T05-foundation-organization-and-employees.md)；T04 第 2 輪：[T04-retry-state-boundaries.md](docs/learning/T04-retry-state-boundaries.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
 
 ## 1. 環境需求（Windows 11）
 
@@ -118,7 +119,7 @@ npm run dev
 | `RENEWFLOW_DEMO_STMAX_ORG_ENABLED` | 把 STMAX 六個帳號排進三個示範部門並設定主管（只補未指派的欄位、不改回管理員的調整）；僅 dev profile 讀取 | `false` |
 | `RENEWFLOW_DEV_SEED_RESET` | 設為 `true` 並重啟一次：只更新開發帳號的密碼雜湊（保留 ID 與出勤資料）；用完改回 `false` | `false` |
 
-隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets`、`e2e:timesheets-review`、`e2e:timesheets-retry`、`e2e:organization` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
+隔離 E2E 堆疊（`npm run e2e:attendance`、`e2e:corrections`、`e2e:geofence`、`e2e:races`、`e2e:timesheets`、`e2e:timesheets-review`、`e2e:timesheets-retry`、`e2e:organization`、`e2e:leave` 自動設定，平常不需要碰）使用 `RENEWFLOW_E2E_RUN_ID`、`RENEWFLOW_E2E_PASSWORD`、`E2E_API_PORT`（8081）、`E2E_API_TARGET`、`E2E_VITE_PORT`（5174）。
 
 後端由 `backend/` 目錄啟動時會自動讀取上一層的 `.env`；也可直接設定同名的真正環境變數。
 
@@ -143,9 +144,9 @@ cd frontend
 npm run e2e
 ```
 
-`npm run e2e` 依序執行十一支腳本，也可單獨執行：
+`npm run e2e` 依序執行十二支腳本，也可單獨執行：
 - `npm run e2e:smoke`（基本流程）、`npm run e2e:logout`（登出失敗情境）、`npm run e2e:password`（密碼位元組提示）：對你正在跑的 dev 環境（5173／8080）執行，只登入／登出開發帳號、讀取畫面，**不會打卡、不會提出申請**。
-- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）、`npm run e2e:timesheets-review`（T04 複審 R1／R2：結果不明的重送與背景更新失敗）、`npm run e2e:timesheets-retry`（T04 第 2 輪：重試失敗不解鎖、清單為空仍可確認）、`npm run e2e:organization`（T05 前置：部門、員工、主管、過期表單、Session 失效、權限、手機）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
+- `npm run e2e:attendance`（T03 打卡）、`npm run e2e:corrections`（T03.1 申請／核准／重新打卡）、`npm run e2e:geofence`（T03.2 定位打卡與設定；以注入的假定位與 DevTools 定位模擬）、`npm run e2e:races`（T03.2 複審 R1／R2：以請求攔截與手動定位控制事件順序的競態測試）、`npm run e2e:timesheets`（T04 專案管理與工時回報）、`npm run e2e:timesheets-review`（T04 複審 R1／R2：結果不明的重送與背景更新失敗）、`npm run e2e:timesheets-retry`（T04 第 2 輪：重試失敗不解鎖、清單為空仍可確認）、`npm run e2e:organization`（T05 前置：部門、員工、主管、過期表單、Session 失效、權限、手機）、`npm run e2e:leave`（T05：請假送出、核准、退回、撤回、改派、指定審核人、越權、版本衝突、回應遺失後重送、手機）：**不使用你的 dev 環境**。各自啟動一組**隔離堆疊**——另一個後端（`spring-boot:test-run`，埠 8081，連**測試資料庫**）、另一個 Vite（埠 5174）、並為本次建立全新的專用員工與管理員；結束時自動關閉。因此不會碰到你的開發帳號與出勤資料，重複執行也不需要清空任何東西。需要 Java／Maven、資料庫容器在執行，且 8081、5174 沒有被占用（被占用時它會拒絕執行）。隔離後端在**套用 migration 之前**就會確認連到的是測試資料庫，啟動時並把測試庫的定位設定恢復為預設（關閉）。
 
 腳本使用本機已安裝的 Edge／Chrome（找不到時設定環境變數 `BROWSER_PATH`），密碼自動讀根目錄 `.env`；截圖與隔離堆疊日誌輸出在 `frontend/e2e/output/`（不進版控）。
 
@@ -203,6 +204,8 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 定位打卡（T03.2）依瀏覽器提供的位置判斷，位置可被模擬或偽造，**不能完全防止代打卡**；手機用區網 HTTP 位址開網站時瀏覽器通常不允許定位（需要 HTTPS），本階段沒有 HTTPS 與手機實機驗證。
 
 組織與員工（T05 前置）：部門是平面清單、每人最多一位直屬主管；沒有刪除、沒有修改帳號／員工編號、沒有密碼修改或重設、沒有邀請信；**主管關係不授與任何資料權限**（主管看不到部屬的出勤或工時）。
+
+請假（T05）是 STMAX 示範規則：只有事假、病假、特休，沒有額度、年資、薪資或法規計算；每筆是一天內的一段時間（半小時為單位，不跨午夜）；「時段長度」未扣除休息時間，不是計薪工時；不會自動修改出勤或工時。**已核准的申請不能修改、撤回或取消**（沒有取消流程，也沒有管理員修改入口）。單一關審核，沒有代理人、通知、附件。
 
 沒有登入失敗鎖定、改密碼、多層審核、通知；Session 存在記憶體（重啟後端需重新登入）；正式環境的同源部署與 HTTPS 設定尚未處理（只定義了 Cookie `Secure` 預設為 true）。詳見安全設計文件。
 
@@ -324,3 +327,39 @@ STMAX 是虛構的網站開發與數位行銷公司，帳號與姓名全部虛�
 5. 若顯示「已被其他管理員修改」，你的輸入會保留；按 **載入最新資料（會取代目前輸入）** 後再改。
 
 **E. 停用部門**：**部門** 分頁按 **編輯**，狀態改 **停用**、填原因、**確認儲存**。部門還有啟用中的員工時會被拒絕；已停用的員工可以保留在停用的部門，但重新啟用他時要同時改到啟用中的部門（或改成未指派）。
+
+## 14. 請假與審核操作步驟（T05）
+
+> 系統不會替任何人送出、核准、退回、撤回、改派或設定。以下步驟都由各帳號自己在網站上操作。STMAX 帳號密碼是 `.env` 中 `RENEWFLOW_DEMO_STMAX_PASSWORD` 的值。
+
+**A. Max 設定自己的請假審核人（先做這一步，否則 Max 不能送出請假）**
+1. 以 `stmax_max` 登入，點左側 **請假管理** → 分頁 **指定請假審核人**。
+2. 在「員工」輸入 `stmax_max`，按 **搜尋**，點選 **Max（STX-001）**。
+3. 畫面顯示：直屬主管「（無）」、目前指定「（未指定，採直屬主管）」、目前送出時的審核人「無法送出」。
+4. 在 **指定請假審核人** 選 **Iris 林怡安（STX-002）**，「變更」會顯示「（未指定）→ Iris 林怡安」。
+5. 填 **修改原因**（例如「Max 沒有直屬主管，由 Iris 審核 Max 的請假」），按 **確認儲存**。下方「設定歷程」會出現這筆紀錄。
+6. 這個設定**不會**改組織的主管關係：Max 仍沒有主管，Iris 的主管仍是 Max。只影響之後送出的申請。
+
+**B. 員工送出請假（例如 Leo）**
+1. 以 `stmax_leo` 登入，點左側 **請假**。上方顯示「預計審核人：Iris 林怡安（直屬主管）」。這只是提示，送出時系統會重新確認。
+2. 選 **假別**（事假／病假／特休）、**日期**、**開始**、**結束**（半小時為單位），畫面會顯示時段長度（未扣除休息時間）。
+3. 填 **原因**（必填，不需要填診斷或醫療資訊），按 **送出申請**。
+4. 下方「我的請假」出現一筆「待審」。按 **詳情** 可看審核人與歷程。
+5. 同一天時段重疊會被拒絕並說明（例如 09:00～12:00 已有申請，就不能再送 11:00～13:00）。前一筆 12:00 結束、下一筆 12:00 開始可以。跨日請分開送出。
+6. 若顯示「無法確認原提交是否已建立」，表單會鎖定在剛才的內容：按 **重新送出原內容** 確認（不會重複建立），或在看過警告後按 **放棄追蹤，開始新的一筆**。重新整理頁面後，請先查看清單確認。
+
+**C. 審核人處理（Leo、Mia、Ryan 的申請由 Iris；Iris、Zoe 的由 Max；Max 的由 Iris）**
+1. 以審核人登入（例如 `stmax_iris`），點左側 **請假審核**。預設只列出**指派給你的待審**申請。
+2. 按 **詳情** → **核准** 或 **退回**。確認畫面會列出申請人、假別、日期、時間、原因。退回原因必填，申請人看得到。
+3. 若顯示「這筆申請已不是待審狀態」或「已被更新」，代表申請人已撤回或管理員已改派：按 **重新載入**，系統不會假裝成功。
+
+**D. 員工查看結果或撤回**
+1. 回到 **請假**，在「我的請假」按 **重新整理**，可以看到「已核准」或「已退回」。退回的申請在詳情中顯示退回原因；需要時重新送出新的申請。
+2. **待審**的申請可以在詳情按 **撤回這筆申請** → **確認撤回**。已核准的申請不能撤回或修改。
+
+**E. 管理員改派（例如 Iris 休假中，Leo 的待審申請改給 Max）**
+1. 以 `stmax_max` 登入，**請假管理** → **申請查詢與改派**，找到該申請按 **詳情**。
+2. 在「改派」選新的審核人。選項不含申請人與目前審核人。填 **改派原因**，按 **檢查改派內容**，確認「Iris 林怡安 → Max」後按 **確認改派**。
+3. 改派後 Iris 不再看得到這筆申請，由 Max 在 **請假審核** 處理。
+4. **Max 自己的申請**不能由 Max 改派：畫面會提示需由另一位管理員操作（例如 `developer` 或 `admin`）。Max 也不能審核自己的申請。
+

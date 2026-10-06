@@ -45,7 +45,7 @@
 4. 密碼以 UTF-8 位元組計不得超過 72（bcrypt 限制），超過在認證前以 400 拒絕。
 5. 未登入不得取得任何受保護資料（除登入端點外，`/api/**` 全部需要登入）。
 
-> T05 前置（部門、員工管理、直屬主管）的需求與領域見 [`t05-foundation/01-requirements-and-domain.md`](t05-foundation/01-requirements-and-domain.md)。
+> T05 前置（部門、員工管理、直屬主管）的需求與領域見 [`t05-foundation/01-requirements-and-domain.md`](t05-foundation/01-requirements-and-domain.md)；T05 請假見 [`t05/01-requirements-and-domain.md`](t05/01-requirements-and-domain.md)。
 
 ## 6. 本輪不做
 

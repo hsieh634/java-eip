@@ -81,7 +81,7 @@ try {
     await loginAs(page, stack.users.a.username, stack.users.a.password, base)
     await waitStatus(page, '尚未上班')
     check('S1 首頁今日打卡：尚未上班，上班可按、下班停用', !(await isDisabled(page, '上班打卡')) && (await isDisabled(page, '下班打卡')))
-    check('S1 側邊選單「出勤打卡」「工時回報」已啟用；請假／設定仍為尚未啟用', (await page.$('a[href="#/attendance"]')) !== null && (await page.$('a[href="#/timesheets"]')) !== null && (await page.$$eval('.nav-item:disabled', (els) => els.length)) === 2)
+    check('S1 側邊選單「出勤打卡」「工時回報」「請假」已啟用；設定仍為尚未啟用', (await page.$('a[href="#/attendance"]')) !== null && (await page.$('a[href="#/timesheets"]')) !== null && (await page.$('a[href="#/leave"]')) !== null && (await page.$$eval('.nav-item:disabled', (els) => els.length)) === 1)
     check('S1 顯示白班與跨日限制說明', (await page.$eval('.card--attendance', (el) => el.textContent)).includes('不支援跨日班'))
     await page.screenshot({ path: path.join(OUT, 'attendance-01-home-not-started.png') })
 

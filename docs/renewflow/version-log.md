@@ -150,3 +150,28 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 上一輪記錄的偶發登入逾時：本輪全部 E2E 未再出現，**原因仍未確定**。
 - 狀態：已實作／作者自測完成／**等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t05-foundation/`；學習文件：`docs/learning/T05-foundation-organization-and-employees.md`。
+
+## 第 12 輪：T05 前置結案＋T05 請假申請與主管審核
+
+- 審查基準：`5187dec7292a5e357504f8c86759a51e526a521d`。
+- **T05 前置已通過 ChatGPT 本輪複審，結案。** 複審證據的性質：
+  - ChatGPT 核對指定 commit 的實際程式、規格、migration 與相關測試。
+  - ChatGPT 擷取實際後端方法完成 26 項受控檢查、前端函式完成 8 項受控檢查，全部通過。
+  - 受控檢查使用 Repository、鎖、API 等替身，**沒有**驗證真正的 Spring／PostgreSQL 整合行為。
+  - 完整後端 282 項測試、11 支 E2E、build／lint 是**作者自測證據**，不是 ChatGPT 完整重跑。
+  - 前置通過複審**不代表**正式環境或商用品質已全面驗收。
+- 本批 commit：標題為 `feat: T05 leave requests and approvals ...` 的 commit，完整 SHA 見交付報告。
+- 新增相依套件、工具、映像檔、服務：**無**。
+- 新增 migration：`V7__leave_requests.sql`（`leave_request`、`leave_approver_setting`、`leave_history`；V1～V6 未修改；不建立任何假單或設定、不修改既有資料）。
+- 後端：
+  - 新模組 `leave`：本人送出／清單／詳情／撤回；審核人清單／核准／退回；ADMIN 查詢／改派／指定請假審核人。
+  - 共用變更：`OrganizationLock.acquireFor(actor)`。取鎖後重新確認操作者，部門與員工寫入也改用它。
+  - 受影響的舊測試 O-09 改為驗證 401；`LAST_ADMIN` 改由新的 O-09b 以 Spy 驗證，保留為第二道防線。
+- 前端：「請假」「請假審核」「請假管理」三頁；側邊選單改為清單渲染（行為不變）；首頁的「待審核（尚未啟用）」卡片換成請假入口；smoke／attendance E2E 的導覽檢查隨之更新。
+- 測試：
+  - 後端 282 → 310。
+  - 新增 E2E `leave.mjs` 56/56；12 支 E2E 全部通過。
+  - 變異驗證 8 項：重疊、送出取鎖、審核人範圍、自我改派、版本、requestId 內容比對、歷程回滾、取鎖後重新確認操作者。全部使對應測試失敗。
+- 開發庫：重啟前已說明原因與影響，之後套用 V7。既有 11 張表 md5 逐列相同，新表 0 筆。STMAX 帳號與組織初始化皆「已符合」，沒有寫入。**沒有**代為建立 Max → Iris 設定，也沒有送出任何假單。
+- 狀態：**T05 作者自測完成，等待 ChatGPT 複審**。
+- 規格：`docs/renewflow/t05/`；學習文件：`docs/learning/T05-leave-and-approval.md`。

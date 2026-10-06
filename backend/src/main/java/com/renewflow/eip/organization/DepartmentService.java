@@ -66,7 +66,7 @@ public class DepartmentService {
         requireAdmin(actor);
         String code = OrganizationRules.normalizeDepartmentCode(body.code());
         String name = OrganizationRules.normalizeDepartmentName(body.name());
-        lock.acquire();
+        lock.acquireFor(actor);
         Instant now = now();
         Long id = departmentRepository.insertIfCodeFree(code, name, now)
                 .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "DEPARTMENT_CODE_DUPLICATE", "部門代碼 " + code + " 已經存在"));
@@ -84,7 +84,7 @@ public class DepartmentService {
         boolean active = body.active();
         String reason = OrganizationRules.normalizeReason(body.reason());
 
-        lock.acquire();
+        lock.acquireFor(actor);
         Department current = departmentRepository.findById(id).orElseThrow(OrganizationRules::departmentNotFound);
         if (current.getVersion() != body.expectedVersion()) {
             throw changed();

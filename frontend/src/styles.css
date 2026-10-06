@@ -928,3 +928,17 @@ a.btn {
     flex: 1 1 100px;
   }
 }
+
+/* ---------- T05：請假 ---------- */
+.pick-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.modal h3 {
+  margin: 0.75rem 0 0.25rem;
+}
