@@ -198,3 +198,17 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 觀察（本輪不修改）：工時表單 `TimesheetPage` 的結果判定與請假的 R1 原寫法相同，可能有同類問題，記錄於學習文件練習題。
 - 狀態：**T05 第 1 輪修正作者自測完成，等待 ChatGPT 複審**。
 - 規格：`docs/renewflow/t05/review-round-1.md`；學習文件：`docs/learning/T05-review-fixes.md`。
+
+
+## 第 14 輪：T03.3 多組打卡與 BUG-TP-001
+
+- 基準：`af596813c4a8c1d89afcedce1d14cc0ee0db5508`；完成實作 SHA：`IMPLEMENTATION_SHA_PENDING`（其後僅補交接版本）。
+- 接手時 main／工作區乾淨，沒有 Claude 未提交成果。本輪 Codex 完成需求至 Archive 文件與實作。
+- 多組出勤、穩定 requestId、持久化原成功回應、精確下班 ID＋版本、共同鎖與交易、多組更正／補登／作廢相容；V8 保留既有資料，V1～V7 不改。
+- 工時 BUG-TP-001：原版 11／17 → 同批修補後 17／17；追加上層表單鎖保護後最終 21／21。成功回應執行期檢查，未知提交保留原本文，重試被拒不清快照。
+- 本輪新執行證據：後端 322／322、名稱調整後相關 30／30、build／lint、12 支 E2E 共 484 檢查點通過；隔離 V7→V8 14 表逐列比較相同。詳細結果與範圍見 [verification](t03-3/verification.md)。
+- 人工讀截圖與差異；手機是模擬尺寸。真人／實機／正式環境／負載／全138案未驗證。
+- 沿用證據：T05 R1～R3 通過 ChatGPT 程式複審與 80 項受控前端函式檢查（使用者提供），不等同完整 E2E 或 Spring／PostgreSQL 整合；本輪不重做已通過修正。
+- 未新增套件、工具、映像檔或服務；未修改共用 HTTP／認證／請假實作；未動開發 8080，開發庫仍 V7。測試堆疊已清理。依本輪明確授權一般 commit／push main，不部署。
+- 狀態：T03.3 與 BUG 修補作者自測完成，等待 ChatGPT 複審；T05.1～T05.3 與可設定簽核未實作，只更新方向文件。
+- 規格：[t03-3](t03-3/)；教材：[T03.3](../learning/T03-3-multiple-attendance-and-submit-results.md)；共用交接：[development-handoff](development-handoff.md)。

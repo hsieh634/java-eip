@@ -25,6 +25,7 @@ function apiCall(page, method, url, body) {
   return page.evaluate(
     async (m, u, b) => {
       const token = decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '')
+      if (m === "POST" && u === "/api/attendance/clock-in") b = { ...b, requestId: crypto.randomUUID() }
       const res = await fetch(u, {
         method: m,
         headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': token },

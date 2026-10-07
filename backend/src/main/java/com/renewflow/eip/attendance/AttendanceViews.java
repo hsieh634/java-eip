@@ -23,10 +23,12 @@ class AttendanceViews {
 
     private final EmployeeRepository employeeRepository;
     private final AttendanceRepository attendanceRepository;
+    private final AttendanceWriteRules rules;
 
-    AttendanceViews(EmployeeRepository employeeRepository, AttendanceRepository attendanceRepository) {
+    AttendanceViews(EmployeeRepository employeeRepository, AttendanceRepository attendanceRepository, AttendanceWriteRules rules) {
         this.employeeRepository = employeeRepository;
         this.attendanceRepository = attendanceRepository;
+        this.rules = rules;
     }
 
     AttendanceRequestResponse request(AttendanceRequest request, LocalDate today) {
@@ -48,7 +50,7 @@ class AttendanceViews {
             Employee reviewer = r.getReviewerId() == null ? null : employees.get(r.getReviewerId());
             boolean pending = r.getStatus() == AttendanceRequestStatus.PENDING;
             Attendance current = pending
-                    ? attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(r.getEmployeeId(), r.getWorkDate()).orElse(null)
+                    ? (r.getTargetAttendanceId() == null ? null : attendanceRepository.findById(r.getTargetAttendanceId()).filter(a -> !a.isVoided()).orElse(null))
                     : null;
             return new AttendanceRequestResponse(
                     r.getId(), r.getType(),
@@ -86,14 +88,19 @@ class AttendanceViews {
 
     /**
      * 待審申請是否已過時：申請當時看到的紀錄（id＋版本）與現在的有效紀錄不同。
-     * 沒有目標（補登）的申請，只要現在已有有效紀錄就算過時。RESET_TODAY 另外在跨日後也算過時。
+     * 沒有目標（補登）的申請檢查與所有有效時段的合法性。RESET_TODAY 另外在跨日後也算過時。
      */
-    private static boolean isStale(AttendanceRequest r, Attendance current, LocalDate today) {
+    private boolean isStale(AttendanceRequest r, Attendance current, LocalDate today) {
         if (r.getType() == AttendanceRequestType.RESET_TODAY && !r.getWorkDate().equals(today)) {
             return true;
         }
         if (r.getTargetAttendanceId() == null) {
-            return current != null;
+            try { rules.validate(r.getEmployeeId(), r.getWorkDate(), null, r.getRequestedClockInAt(), r.getRequestedClockOutAt()); return false; }
+            catch (AttendanceConflictException conflict) { return true; }
+        }
+        if (r.getType() == AttendanceRequestType.CORRECT_TIME) {
+            try { rules.validate(r.getEmployeeId(), r.getWorkDate(), r.getTargetAttendanceId(), r.getRequestedClockInAt(), r.getRequestedClockOutAt()); }
+            catch (AttendanceConflictException conflict) { return true; }
         }
         return current == null
                 || !current.getId().equals(r.getTargetAttendanceId())

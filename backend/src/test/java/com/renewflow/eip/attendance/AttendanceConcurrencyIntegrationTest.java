@@ -99,7 +99,7 @@ class AttendanceConcurrencyIntegrationTest extends AttendanceTestBase {
             for (int i = 0; i < 16; i++) {
                 tasks.add(() -> {
                     try {
-                        attendanceService.clockIn(alice.getId(), null);
+                        attendanceService.clockIn(alice.getId(), clockBody(false));
                         return "OK";
                     } catch (AttendanceRuleException e) {
                         return e.getRule().name();
@@ -147,14 +147,14 @@ class AttendanceConcurrencyIntegrationTest extends AttendanceTestBase {
     @DisplayName("A-25 服務層：16 個執行緒同時下班 → 恰 1 個成功、其餘皆為 ALREADY_CLOCKED_OUT；下班時間不被後到者覆蓋")
     void concurrentClockOutAtServiceLevel() throws Exception {
         clock.set(Instant.parse("2026-10-01T01:00:00Z"));
-        attendanceService.clockIn(alice.getId(), null);
+        attendanceService.clockIn(alice.getId(), clockBody(false));
 
         clock.setAutoAdvance(Instant.parse("2026-10-01T10:00:00Z"), Duration.ofSeconds(1));
         List<Callable<String>> tasks = new ArrayList<>();
         for (int i = 0; i < 16; i++) {
             tasks.add(() -> {
                 try {
-                    return "OK:" + attendanceService.clockOut(alice.getId(), null).clockOutAt();
+                    return "OK:" + attendanceService.clockOut(alice.getId(), clockBody(true)).clockOutAt();
                 } catch (AttendanceRuleException e) {
                     return e.getRule().name();
                 } catch (Exception e) {
@@ -171,5 +171,10 @@ class AttendanceConcurrencyIntegrationTest extends AttendanceTestBase {
         Instant stored = jdbc.queryForObject("select clock_out_at from attendance where employee_id = ?",
                 OffsetDateTime.class, alice.getId()).toInstant();
         assertThat("OK:" + stored).isEqualTo(winners.get(0));
+    }
+    private com.renewflow.eip.geofence.GeofenceDtos.ClockLocationRequest clockBody(boolean out) {
+        var today = attendanceService.today(alice.getId());
+        return new com.renewflow.eip.geofence.GeofenceDtos.ClockLocationRequest(null, null, null, null,
+                java.util.UUID.randomUUID(), out ? today.recordId() : null, out ? today.version() : null);
     }
 }

@@ -16,21 +16,12 @@ import java.util.Optional;
  */
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    /**
-     * 上班：原子地「沒有『有效』紀錄才新增」。回傳 1＝新增成功；0＝今日已有有效紀錄。
-     *
-     * <p>衝突目標 <code>(employee_id, work_date) where voided_at is null</code> 必須與部分唯一索引
-     * uq_attendance_active_employee_work_date 的定義完全相同，PostgreSQL 才找得到要裁決的索引；
-     * 作廢的舊紀錄不在索引內，所以重新打卡可以新增。
-     *
-     * <p>為什麼不是「先查有沒有，再 save」：兩個同時的請求可能都查到「沒有」。
-     * 為什麼不是捕捉唯一限制例外：PostgreSQL 在約束錯誤後會把整個交易標為失敗，之後不能再查詢。
-     */
+    /** 上班：沒有有效未完成組才新增。部分唯一索引為最後防線，跨列重疊由同交易員工鎖內檢查。 */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             insert into attendance (employee_id, work_date, clock_in_at, created_at, updated_at)
             values (:employeeId, :workDate, :now, :now, :now)
-            on conflict (employee_id, work_date) where voided_at is null do nothing
+            on conflict (employee_id, work_date) where voided_at is null and clock_out_at is null do nothing
             """, nativeQuery = true)
     int insertIfAbsent(@Param("employeeId") Long employeeId,
                        @Param("workDate") LocalDate workDate,
@@ -45,11 +36,14 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Query(value = """
             update attendance set clock_out_at = :now, updated_at = :now, version = version + 1
              where employee_id = :employeeId and work_date = :workDate
+               and id = :id and version = :version
                and voided_at is null and clock_out_at is null and clock_in_at <= :now
             """, nativeQuery = true)
     int clockOutIfOpen(@Param("employeeId") Long employeeId,
                        @Param("workDate") LocalDate workDate,
-                       @Param("now") Instant now);
+                       @Param("now") Instant now,
+                       @Param("id") Long id,
+                       @Param("version") long version);
 
     /** 作廢（重新打卡）：只在「版本相符且仍有效」時成功；原時間保留。回傳 0＝資料已被改過。 */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
@@ -75,12 +69,12 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
                          @Param("clockOut") Instant clockOut,
                          @Param("now") Instant now);
 
-    /** 補登：該日沒有有效紀錄時才建立（source = MANUAL）。回傳 0＝該日已有有效紀錄。 */
+    /** 補登：建立新的 MANUAL 時段。服務先在員工鎖內檢查其他有效時段；未完成唯一索引仍作最後防線。 */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             insert into attendance (employee_id, work_date, clock_in_at, clock_out_at, source, corrected_at, created_at, updated_at)
             values (:employeeId, :workDate, :clockIn, :clockOut, 'MANUAL', :now, :now, :now)
-            on conflict (employee_id, work_date) where voided_at is null do nothing
+            on conflict (employee_id, work_date) where voided_at is null and clock_out_at is null do nothing
             """, nativeQuery = true)
     int insertManualIfAbsent(@Param("employeeId") Long employeeId,
                              @Param("workDate") LocalDate workDate,
@@ -88,8 +82,12 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
                              @Param("clockOut") Instant clockOut,
                              @Param("now") Instant now);
 
-    /** 該日的有效紀錄（最多一筆，由部分唯一索引保證）。 */
-    Optional<Attendance> findByEmployeeIdAndWorkDateAndVoidedAtIsNull(Long employeeId, LocalDate workDate);
+    /** 該日的所有有效時段，依上班時間排序。 */
+    List<Attendance> findAllByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByClockInAtAscIdAsc(Long employeeId, LocalDate workDate);
+
+    Optional<Attendance> findFirstByEmployeeIdAndWorkDateAndClockOutAtIsNullAndVoidedAtIsNull(Long employeeId, LocalDate workDate);
+
+    Optional<Attendance> findFirstByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByIdDesc(Long employeeId, LocalDate workDate);
 
     /** 今日之前最近一筆「有效、有上班、沒下班」的紀錄（用來提醒使用者）；作廢紀錄不計。 */
     Optional<Attendance> findFirstByEmployeeIdAndWorkDateBeforeAndClockOutAtIsNullAndVoidedAtIsNullOrderByWorkDateDesc(

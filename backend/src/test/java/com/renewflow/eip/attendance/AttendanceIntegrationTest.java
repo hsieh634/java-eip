@@ -125,20 +125,16 @@ class AttendanceIntegrationTest extends AttendanceTestBase {
     }
 
     @Test
-    @DisplayName("A-07 已下班後再上班 → 409 ALREADY_CLOCKED_IN（當天不能開第二組），仍只有一筆")
+    @DisplayName("A-07／M01 已下班後再上班 → 200，保留前一組")
     void clockInAfterCompleted() {
-        TestBrowser aliceB = loginAs("alice");
-        aliceB.post(CLOCK_IN, null);
-        clock.set(Instant.parse("2026-10-01T10:00:00Z"));
-        aliceB.post(CLOCK_OUT, null);
-
-        clock.set(Instant.parse("2026-10-01T11:00:00Z"));
-        Reply again = aliceB.post(CLOCK_IN, null);
-
-        assertThat(again.status()).isEqualTo(409);
-        assertThat(again.code()).isEqualTo("ALREADY_CLOCKED_IN");
-        assertThat(again.json().get("message").asString()).contains("已完成");
-        assertThat(attendanceRows()).isEqualTo(1);
+        TestBrowser browser = loginAs("alice");
+        assertThat(browser.post(CLOCK_IN, null).status()).isEqualTo(200);
+        clock.set(Instant.parse("2026-10-01T04:00:00Z"));
+        assertThat(browser.post(CLOCK_OUT, null).status()).isEqualTo(200);
+        clock.set(Instant.parse("2026-10-01T06:00:00Z"));
+        assertThat(browser.post(CLOCK_IN, null).status()).isEqualTo(200);
+        assertThat(attendanceRows()).isEqualTo(2);
+        assertThat(browser.get(TODAY).json().get("status").asString()).isEqualTo("WORKING");
     }
 
     // ---------------- 身份與資料隔離 ----------------
@@ -315,10 +311,10 @@ class AttendanceIntegrationTest extends AttendanceTestBase {
     }
 
     @Test
-    @DisplayName("A-29 外鍵錯誤（員工不存在）不會被偽裝成「重複上班」：丟出資料完整性例外，而不是 AttendanceRuleException")
+    @DisplayName("A-29 員工不存在時明確回報 EMPLOYEE_NOT_FOUND，不偽裝成重複上班")
     void foreignKeyViolationIsNotReportedAsDuplicate() {
         assertThatThrownBy(() -> attendanceService.clockIn(-1L, null))
-                .isInstanceOf(DataIntegrityViolationException.class)
+                .isInstanceOf(AttendanceNotFoundException.class)
                 .isNotInstanceOf(AttendanceRuleException.class);
         assertThat(attendanceRows()).isZero();
     }

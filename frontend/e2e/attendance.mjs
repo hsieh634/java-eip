@@ -97,13 +97,13 @@ try {
     check('S1 出勤頁：預設本月，列出今日一筆「工作中」', (await page.$$eval('[data-testid=records-table] tbody tr', (r) => r.length)) === 1 && (await page.$eval('.status-chip', (el) => el.textContent)) === '工作中')
 
     await (await button(page, '下班打卡')).click()
-    await waitStatus(page, '今日已完成')
+    await waitStatus(page, '目前已下班，可再次上班')
     await page.waitForFunction(() => document.querySelector('.status-chip')?.textContent === '已完成')
-    check('S1 下班後：今日卡片與紀錄列表同步更新為已完成，兩顆按鈕都停用', (await isDisabled(page, '上班打卡')) && (await isDisabled(page, '下班打卡')))
+    check('S1 下班後：紀錄同步更新、可再次上班', !(await isDisabled(page, '上班打卡')) && (await isDisabled(page, '下班打卡')))
     await page.screenshot({ path: path.join(OUT, 'attendance-02-page-completed.png') })
 
     await page.reload({ waitUntil: 'networkidle0' })
-    await waitStatus(page, '今日已完成')
+    await waitStatus(page, '目前已下班，可再次上班')
     check('S1 重新整理後仍停留在出勤頁且狀態正確（hash 保留）', page.url().endsWith('#/attendance') && (await page.$('[data-testid=records-table]')) !== null)
     await page.goBack()
     await page.waitForSelector('main h1')
@@ -149,7 +149,7 @@ try {
         const headers = { ...request.headers(), cookie: cookies.map((c) => `${c.name}=${c.value}`).join('; ') }
         delete headers.host
         delete headers['content-length']
-        await fetch(request.url(), { method: 'POST', headers })
+        await fetch(request.url(), { method: 'POST', headers, body: request.postData() })
         return request.abort('failed')
       }
       return request.continue()
@@ -170,7 +170,7 @@ try {
     await page1.bringToFront()
     check('S2 過期的分頁仍顯示可按的上班按鈕', (await todayStatus(page1)) === '尚未上班' && !(await isDisabled(page1, '上班打卡')))
     await (await button(page1, '上班打卡')).click()
-    await waitNotice(page1, '已經上班打卡')
+    await waitNotice(page1, '目前已有未下班時段')
     await waitStatus(page1, '工作中')
     check('S2 重複上班：顯示後端的 409 訊息，並刷新為最新狀態（工作中）', (await page1.$eval('.notice--error', (el) => el.textContent)).includes('已更新為最新狀態'))
     check('S2 重複上班後沒有被導回登入頁', (await page1.$('.login-card')) === null)
@@ -179,7 +179,7 @@ try {
     mode.clockOut = 'lost-response'
     await (await button(page1, '下班打卡')).click()
     await waitNotice(page1, '無法確認打卡結果')
-    await waitStatus(page1, '今日已完成')
+    await waitStatus(page1, '目前已下班，可再次上班')
     const outTime = await page1.$eval('[data-testid=clock-out-time]', (el) => el.textContent)
     check('S2 回應遺失：畫面不假設結果，重新查詢後顯示伺服器實際已下班', /^\d\d:\d\d:\d\d$/.test(outTime), outTime)
     check('S2 回應遺失後：按鈕狀態恢復一致（皆停用）', (await isDisabled(page1, '上班打卡')) && (await isDisabled(page1, '下班打卡')))
@@ -209,12 +209,12 @@ try {
     await (await button(page1, '上班打卡')).click()
     await waitNotice(page1, '無法確認打卡結果')
     check('S3 5xx：顯示無法確認的提示，且不會導回登入頁（不是登入問題）', (await page1.$('.login-card')) === null && (await page1.$('.topbar')) !== null)
-    check('S3 5xx：重新查詢後狀態仍是尚未上班，按鈕恢復可按', (await todayStatus(page1)) === '尚未上班' && !(await isDisabled(page1, '上班打卡')))
+    check('S3 5xx：查詢狀態仍尚未上班，原提交維持鎖定且可確認', (await todayStatus(page1)) === '尚未上班' && (await isDisabled(page1, '上班打卡')) && (await button(page1, '重送原打卡確認')) !== null)
 
     mode.clockIn = 'abort'
-    await (await button(page1, '上班打卡')).click()
+    await (await button(page1, '重送原打卡確認')).click()
     await page1.waitForFunction(() => [...document.querySelectorAll('.notice--error')].length === 1)
-    check('S3 網路中斷：同樣顯示無法確認，狀態仍是尚未上班，可再試', (await todayStatus(page1)) === '尚未上班' && !(await isDisabled(page1, '上班打卡')))
+    check('S3 網路中斷：原提交維持未知，不能換新意圖', (await todayStatus(page1)) === '尚未上班' && (await isDisabled(page1, '上班打卡')))
 
     // 登入失效：同一個登入在另一個分頁登出，這個分頁再打卡 → 真實的 401
     mode.clockIn = 'pass'
@@ -225,7 +225,7 @@ try {
     await second.page.click('.topbar .btn')
     await second.page.waitForSelector('.login-card')
     await page1.bringToFront()
-    await (await button(page1, '上班打卡')).click()
+    await (await button(page1, '重送原打卡確認')).click()
     await page1.waitForSelector('.login-card')
     check('S3 登入失效（401）：回到登入頁', true)
     await assertNoUnhandled('S3', [first.tracker, second.tracker])
@@ -256,8 +256,8 @@ try {
     await page.screenshot({ path: path.join(OUT, 'attendance-04-mobile-records.png') })
 
     await (await button(page, '下班打卡')).tap()
-    await waitStatus(page, '今日已完成')
-    check('S4 手機：點擊下班打卡成功，狀態為今日已完成', true)
+    await waitStatus(page, '目前已下班，可再次上班')
+    check('S4 手機：點擊下班打卡成功，狀態為目前已下班，可再次上班', true)
     await assertNoUnhandled('S4', [tracker])
     await context.close()
   }

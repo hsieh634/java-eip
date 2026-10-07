@@ -16,14 +16,14 @@ type TodayForm = { kind: 'revoke' | 'reset'; seen: TodayAttendance }
  * 今日打卡卡片（首頁與出勤頁共用）。
  * 今日已有紀錄時提供兩種申請，兩者對資料的影響不同：
  * - 申請撤銷下班打卡：同一筆紀錄保留上班時間、只清掉下班時間（只在已下班時出現）。
- * - 申請整組作廢並重新打卡：整筆紀錄作廢，今日回到尚未上班（只有上班時間也可以）。
+ * - 申請整組作廢並重新打卡：只作廢所選時段；其他有效時段仍決定今日狀態（只有上班時間也可以）。
  * 申請不會立即更動紀錄，也不會開放打卡按鈕，要等管理員核准；核准後（視窗回到前景或輪詢時）重新向後端查詢真實狀態。
  * onChanged：打卡或申請狀態改變後通知外層（例如重新載入紀錄列表）。
  */
 export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => void }>) {
   const messageOf = useApiErrorMessage()
   const auth = useAuth()
-  const { state, busy, phase, notice, retry, reload, perform } = useTodayAttendance(onChanged)
+  const { state, busy, phase, notice, retry, reload, perform, pending: unconfirmed, confirmPending, abandonPending } = useTodayAttendance(onChanged)
   const requests = useMyRequests(() => {
     void reload() // 申請有結果（被核准或退回）→ 重新查詢今日狀態
     onChanged?.()
@@ -31,15 +31,19 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
   const [form, setForm] = useState<TodayForm | null>(null)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [abandonWarning, setAbandonWarning] = useState(false)
 
   const employeeName = auth.state.status === 'authenticated' ? `${auth.state.user.displayName}（${auth.state.user.employeeNo}）` : ''
   const data = state.kind === 'ready' ? state.data : null
   const todayRequests = data && requests.state.kind === 'ready' ? requests.state.requests.filter((r) => r.workDate === data.workDate) : []
   const pending = todayRequests.find((r) => r.status === 'PENDING') ?? null
   const lastRejected = todayRequests.find((r) => r.status === 'REJECTED') ?? null
-  const requestable = data?.recordId != null && data.version != null && !pending
-  const canRevoke = requestable && data?.status === 'COMPLETED' && data.clockOutAt !== null
-  const canReset = requestable && (data?.status === 'WORKING' || data?.status === 'COMPLETED')
+  const selected = data?.records.find(r => r.id === selectedId && r.status !== 'VOIDED') ?? data?.records.find(r => r.id === data.recordId)
+  const requestable = selected != null && !pending
+  const canRevoke = requestable && selected?.clockOutAt !== null
+  const canReset = requestable
+  const seenSelected = data && selected ? { ...data, recordId: selected.id, version: selected.version, clockInAt: selected.clockInAt, clockOutAt: selected.clockOutAt, status: selected.status } : null
 
   async function submit(reason: string) {
     if (!form) return
@@ -106,7 +110,7 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
       {data && (
         <>
           <p className={`status status--${data.status.toLowerCase()}`} data-testid="today-status">
-            {data.status === 'COMPLETED' ? '今日已完成' : RECORD_STATUS_LABEL[data.status]}
+            {data.status === 'COMPLETED' ? '目前已下班，可再次上班' : RECORD_STATUS_LABEL[data.status]}
           </p>
           <dl className="info">
             <dt>日期</dt>
@@ -123,7 +127,27 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
             </p>
           )}
 
-          <ClockActions data={data} busy={busy} phase={phase} onClock={(action) => void perform(action)} />
+          <p data-testid="attendance-total" data-seconds={data.completedSeconds}>完成時段合計：{Math.floor(data.completedSeconds / 3600)} 小時 {Math.floor(data.completedSeconds % 3600 / 60)} 分 {data.completedSeconds % 60} 秒</p>
+          <p className="muted small">未完成時段尚未計入；作廢時段不計。這是出勤時長，不是專案工時或計薪工時，沒有自動扣午休。</p>
+          <ul data-testid="today-sessions">
+            {data.records.map(r => <li key={r.id} data-record-id={r.id} data-status={r.status}>#{r.id}：{formatTime(r.clockInAt)} ～ {formatTime(r.clockOutAt)}（{RECORD_STATUS_LABEL[r.status]}；版本 {r.version}；{r.source === 'MANUAL' ? '補登' : '打卡'}）</li>)}
+          </ul>
+          <ClockActions data={data} busy={busy ?? (unconfirmed ? unconfirmed.action : null)} phase={phase} onClock={(action) => void perform(action)} />
+          {unconfirmed && <div className="banner banner--warn" data-testid="clock-unconfirmed">
+            <p>原{unconfirmed.action === 'in' ? '上班' : '下班'}打卡尚未確認。只會重送原內容與原識別碼，不會取得新的定位或改成另一個打卡。</p>
+            <button type="button" className="btn" disabled={busy !== null} onClick={() => void confirmPending()}>重送原打卡確認</button>
+            {!abandonWarning ? <button type="button" className="btn" disabled={busy !== null} onClick={() => setAbandonWarning(true)}>放棄追蹤打卡</button> : <>
+              <p role="alert">原打卡可能已成功。放棄後先查真實時段；再次操作會使用新的識別碼，請先確認沒有重複意圖。</p>
+              <button type="button" className="btn" disabled={busy !== null} onClick={() => { abandonPending(); setAbandonWarning(false) }}>確認放棄追蹤</button>
+              <button type="button" className="btn" onClick={() => setAbandonWarning(false)}>繼續追蹤</button>
+            </>}
+          </div>}
+          {data.records.some(r => r.status !== 'VOIDED') && <label>申請目標時段
+            <select data-testid="today-target" value={selected?.id ?? ''} onChange={e => setSelectedId(Number(e.target.value))}>
+              {data.records.filter(r => r.status !== 'VOIDED').map(r => <option key={r.id} value={r.id}>#{r.id} {formatTime(r.clockInAt)} ～ {formatTime(r.clockOutAt)}</option>)}
+            </select>
+          </label>}
+          <p className="muted small">每位員工每天最多一筆待審出勤更正；作廢或撤銷只針對所選時段。</p>
 
           {pending && (
             <div className="banner banner--info" role="status" data-testid="today-pending" data-kind={pending.kind}>
@@ -148,12 +172,12 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
           {!form && (canRevoke || canReset) && (
             <div className="actions">
               {canRevoke && (
-                <button type="button" className="btn" onClick={() => setForm({ kind: 'revoke', seen: data })}>
+                <button type="button" className="btn" onClick={() => seenSelected && setForm({ kind: 'revoke', seen: seenSelected })}>
                   申請撤銷下班打卡
                 </button>
               )}
               {canReset && (
-                <button type="button" className="btn" onClick={() => setForm({ kind: 'reset', seen: data })}>
+                <button type="button" className="btn" onClick={() => seenSelected && setForm({ kind: 'reset', seen: seenSelected })}>
                   申請整組作廢並重新打卡
                 </button>
               )}
@@ -175,7 +199,7 @@ export function TodayAttendanceCard({ onChanged }: Readonly<{ onChanged?: () => 
       )}
 
       <p className="muted small">
-        本版本採固定白班、每日一組上下班，不支援跨日班。誤按或漏打請提出申請，由管理員審核；要修改時間或補登其他日期，請到「出勤打卡」頁的「申請更正／補登時間」。時間以台北時區顯示。
+        本版本支援同日多組上下班，不支援跨日班。誤按或漏打請提出申請，由管理員審核。時間以台北時區顯示。未確認追蹤只保留在本頁掛載期間；切頁或重新整理後只查詢真實資料，不自動重送。
       </p>
     </section>
   )
@@ -194,7 +218,8 @@ interface TodayRequestFormProps {
 function TodayRequestForm({ form, current, employeeName, onSubmit, onCancel }: Readonly<TodayRequestFormProps>) {
   const { kind, seen } = form
   const revoke = kind === 'revoke'
-  const outdated = current.recordId !== seen.recordId || current.version !== seen.version
+  const target = current.records.find(r => r.id === seen.recordId && r.status !== 'VOIDED')
+  const outdated = !target || target.version !== seen.version
   return (
     <ReasonForm
       key={kind}
@@ -207,6 +232,7 @@ function TodayRequestForm({ form, current, employeeName, onSubmit, onCancel }: R
     >
       <h3>{revoke ? '申請撤銷下班打卡' : '申請整組作廢並重新打卡'}</h3>
       <dl className="compare">
+        <dt>目標時段</dt><dd>#{seen.recordId}（版本 {seen.version}）</dd>
         <dt>員工</dt>
         <dd>{employeeName}</dd>
         <dt>日期</dt>
@@ -244,8 +270,7 @@ function ResetOutcome({ seen }: Readonly<{ seen: TodayAttendance }>) {
   return (
     <>
       <p className="banner banner--warn" data-testid="form-outcome">
-        核准後：今日這一整組打卡（上班{hasOut ? '與下班' : ''}）都會標為作廢，原時間只保留在歷程中；今日回到「尚未上班」，必須重新打上班卡
-        {hasOut ? '與下班卡' : ''}。
+        核准後：所選 #{seen.recordId} 這一組打卡（上班{hasOut ? '與下班' : ''}）標為作廢，保留原時間與事件，其他時段不變；目前沒有有效未完成時段時，可重新上班。
       </p>
       {hasOut && <p className="small">如果只是誤按下班，請改用「申請撤銷下班打卡」，可以保留上班時間。</p>}
       <p className="muted small">整組作廢只適用於今日；過了今天（台北時間）就無法核准，請改用更正／補登時間。</p>
@@ -262,7 +287,7 @@ function ClockActions({ data, busy, phase, onClock }: Readonly<{ data: TodayAtte
   return (
     <>
       <div className="actions">
-        <button type="button" className="btn btn--primary btn--large" onClick={() => onClock('in')} disabled={busy !== null || data.status !== 'NOT_STARTED'}>
+        <button type="button" className="btn btn--primary btn--large" onClick={() => onClock('in')} disabled={busy !== null || data.status === 'WORKING'}>
           {label('in')}
         </button>
         <button type="button" className="btn btn--large" onClick={() => onClock('out')} disabled={busy !== null || data.status !== 'WORKING'}>

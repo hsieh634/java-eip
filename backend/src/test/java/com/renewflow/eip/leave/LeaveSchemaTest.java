@@ -26,7 +26,7 @@ class LeaveSchemaTest extends LeaveTestBase {
     @DisplayName("LS-01 乾淨資料庫：V1～V7；三張新表存在且為空（不建立預設申請或設定）；限制存在")
     void cleanDatabaseHasV7() {
         assertThat(jdbc.queryForList("select version from flyway_schema_history where success order by installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
         for (String t : List.of("leave_request", "leave_approver_setting", "leave_history")) {
             assertThat(jdbc.queryForObject("select count(*) from " + t, Integer.class)).as(t).isZero();
         }

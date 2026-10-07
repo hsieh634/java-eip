@@ -5,6 +5,7 @@ import { ApiError } from '../api/http'
 import { useAuth } from '../auth/useAuth'
 import { GeolocationFailure, getCurrentLocation } from '../lib/geolocation'
 import { taipeiToday } from '../lib/time'
+import { newRequestId } from '../lib/requestId'
 import { useAutoRefresh } from './useAutoRefresh'
 
 export type TodayState =
@@ -28,7 +29,7 @@ const ACTION_LABEL: Record<Action, string> = { in: '上班打卡', out: '下班�
 /** 按下按鈕之後，這個操作是否仍然成立（例如另一個分頁已經打過卡、畫面已更新）。 */
 function stillAllowed(action: Action, state: TodayState): boolean {
   if (state.kind !== 'ready') return true // 狀態未知時交給後端判斷（後端仍會以 409 拒絕不成立的操作）
-  return action === 'in' ? state.data.status === 'NOT_STARTED' : state.data.status === 'WORKING'
+  return action === 'in' ? state.data.status !== 'WORKING' : state.data.status === 'WORKING'
 }
 
 const requiresLocation = (action: Action, policy: LocationPolicy) => (action === 'in' ? policy.clockInRequired : policy.clockOutRequired)
@@ -77,6 +78,9 @@ interface Operation {
   readonly id: number
   readonly action: Action
   readonly lifetime: Lifetime
+  readonly requestId: string
+  readonly targetId: number | null
+  readonly targetVersion: number | null
 }
 
 /**
@@ -99,6 +103,8 @@ export function useTodayAttendance(onChanged?: () => void) {
   const [busy, setBusy] = useState<Action | null>(null)
   const [phase, setPhase] = useState<Phase | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [pending, setPending] = useState<{ action: Action; body: attendanceApi.ClockSubmission } | null>(null)
+  const pendingRef = useRef<typeof pending>(null)
 
   // 目前掛載的有效期間（effect 中建立；在 effect 執行前的初始值視為無效）
   const lifetime = useRef<Lifetime>({ alive: false })
@@ -224,52 +230,70 @@ export function useTodayAttendance(onChanged?: () => void) {
    * 但無法撤回伺服器可能已完成的寫入（切頁或中止請求都不會讓後端回滾）；重新進入畫面時會查詢真實狀態，且不會自動重送。
    */
   const perform = useCallback(
-    async (action: Action) => {
+    async (action: Action, confirming = false) => {
       if (activeOperation.current) return // 防連按：同一時間只有一個操作
-      const op: Operation = { id: ++operationSeq.current, action, lifetime: lifetime.current }
+      const original = pendingRef.current
+      if (original && !confirming) return
+      if (confirming && !original) return
+      if (original) action = original.action
+      const seen = latestState.current.kind === 'ready' ? latestState.current.data : null
+      const op: Operation = { id: ++operationSeq.current, action, lifetime: lifetime.current,
+        requestId: original?.body.requestId ?? newRequestId(), targetId: seen?.recordId ?? null, targetVersion: seen?.version ?? null }
       activeOperation.current = op
       setBusy(action)
       setPhase('checking')
       setNotice(null)
 
       let policy: LocationPolicy
-      try {
-        policy = await attendanceApi.fetchLocationPolicy()
-      } catch (error) {
-        if (!isCurrent(op)) return
-        if (error instanceof ApiError && error.status === 401) {
-          end(op, null)
-          await refresh()
-          return
-        }
-        end(op, { kind: 'error', retry: action, text: '無法確認定位設定，這次沒有打卡。請稍後再試。' })
-        return
-      }
-      if (!isCurrent(op)) return // 設定回來時已切頁：不定位、不送出
-
       let location: ClockLocation | undefined
-      if (requiresLocation(action, policy)) {
-        const located = await locate(op, policy)
-        if (located === 'stale') return
-        if ('kind' in located) {
-          end(op, located)
+      if (!original) {
+        try {
+          policy = await attendanceApi.fetchLocationPolicy()
+        } catch (error) {
+          if (!isCurrent(op)) return
+          if (error instanceof ApiError && error.status === 401) {
+            end(op, null)
+            await refresh()
+            return
+          }
+          end(op, { kind: 'error', retry: action, text: '無法確認定位設定，這次沒有打卡。請稍後再試。' })
           return
         }
-        location = located
-      }
+        if (!isCurrent(op)) return // 設定回來時已切頁：不定位、不送出
 
-      // 送出前最後確認（需要定位與不需要定位走同一個檢查）
-      if (!isCurrent(op)) return
-      if (!stillAllowed(action, latestState.current)) {
-        await load() // 顯示最新狀態
-        end(op, { kind: 'error', text: `今日狀態已經改變，已取消這次「${ACTION_LABEL[action]}」，請確認目前狀態後再操作。` })
-        return
+        if (requiresLocation(action, policy)) {
+          const located = await locate(op, policy)
+          if (located === 'stale') return
+          if ('kind' in located) {
+            end(op, located)
+            return
+          }
+          location = located
+        }
+
+        // 送出前最後確認（需要定位與不需要定位走同一個檢查）
+        if (!isCurrent(op)) return
+        if (!stillAllowed(action, latestState.current)) {
+          await load() // 顯示最新狀態
+          end(op, { kind: 'error', text: `今日狀態已經改變，已取消這次「${ACTION_LABEL[action]}」，請確認目前狀態後再操作。` })
+          return
+        }
+        if (action === 'out' && latestState.current.kind === 'ready' &&
+            (latestState.current.data.recordId !== op.targetId || latestState.current.data.version !== op.targetVersion)) {
+          end(op, { kind: 'error', text: '下班目標在定位期間已變更，這次沒有打卡，請重新確認時段。' })
+          return
+        }
       }
 
       setPhase('submitting')
       let outcome: Notice
+      const body: attendanceApi.ClockSubmission = original?.body ?? { ...location, requestId: op.requestId,
+        ...(action === 'out' && op.targetId !== null && op.targetVersion !== null ? { expectedAttendanceId: op.targetId, expectedVersion: op.targetVersion } : {}) }
       try {
-        await (action === 'in' ? attendanceApi.clockIn(location) : attendanceApi.clockOut(location))
+        await (action === 'in' ? attendanceApi.clockIn(body) : attendanceApi.clockOut(body))
+        if (!isCurrent(op)) return
+        pendingRef.current = null
+        setPending(null)
         outcome = { kind: 'success', text: action === 'in' ? '上班打卡成功。' : '下班打卡成功。' }
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
@@ -279,6 +303,13 @@ export function useTodayAttendance(onChanged?: () => void) {
           return
         }
         outcome = describeClockError(error, action)
+        if (!isCurrent(op)) return
+        if (original || !(error instanceof ApiError) || error.status === 0 || error.status >= 500) {
+          const snapshot = original ?? { action, body }
+          pendingRef.current = snapshot
+          setPending(snapshot)
+          outcome = { kind: 'error', text: `${outcome.text} 原提交仍未確認；請重送原打卡確認，或看過警告後明確放棄追蹤。` }
+        }
       }
 
       await load() // 無論結果如何，都以後端的真實狀態為準（若被更新的查詢取代，以最新的為準）
@@ -294,6 +325,9 @@ export function useTodayAttendance(onChanged?: () => void) {
     busy,
     phase,
     notice,
+    pending,
+    confirmPending: () => pendingRef.current && perform(pendingRef.current.action, true),
+    abandonPending: () => { if (activeOperation.current) return; pendingRef.current = null; setPending(null); setNotice(null); applyState({ kind: 'loading' }); void load() },
     retry,
     reload: load,
     clockIn: () => perform('in'),

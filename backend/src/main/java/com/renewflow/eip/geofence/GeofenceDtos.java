@@ -22,14 +22,18 @@ public final class GeofenceDtos {
     }
 
     /**
-     * 打卡時可附帶的定位資料（全部可省略：不受限制時沿用無本文的打卡）。
+     * 每次邏輯打卡必填 requestId；定位可省略，下班須有指定 ID＋版本。
      * 沒有 distance、inside、中心或半徑欄位——那些一律由後端決定；前端多送的欄位會被忽略。
      */
     public record ClockLocationRequest(
             @DecimalMin("-90") @DecimalMax("90") Double latitude,
             @DecimalMin("-180") @DecimalMax("180") Double longitude,
             @DecimalMin("0") Double accuracy,
-            Instant capturedAt) {
+            Instant capturedAt,
+            @NotNull java.util.UUID requestId, Long expectedAttendanceId, Long expectedVersion) {
+        public ClockLocationRequest(Double latitude, Double longitude, Double accuracy, Instant capturedAt) {
+            this(latitude, longitude, accuracy, capturedAt, null, null, null);
+        }
     }
 
     /** 員工端：本次打卡是否需要定位。不含公司中心座標（最小揭露）。 */

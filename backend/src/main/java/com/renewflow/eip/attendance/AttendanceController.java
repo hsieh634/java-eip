@@ -19,7 +19,7 @@ import java.time.LocalDate;
 /**
  * HTTP 邊界。重點：這裡的每個方法都沒有「員工 ID／日期／時間」參數可以讓前端指定——
  * 員工來自 Session（AuthenticationPrincipal），時間來自伺服器。多餘的查詢參數與本文欄位都會被忽略。
- * T03.2：打卡本文只能帶「原始定位資料」（可省略）；是否需要定位、是否在範圍內一律由後端判斷。
+ * T03.2：打卡本文帶 requestId、原始定位及下班目標快照；是否需要定位、是否在範圍內一律由後端判斷。
  * 未登入／帳號失效已在更早的 Security Filter 處理，不會進到這裡。
  */
 @RestController
@@ -34,16 +34,16 @@ public class AttendanceController {
         this.geofenceGate = geofenceGate;
     }
 
-    /** 本文可省略（required = false）：不受定位限制時，T03 的無本文請求照常運作。 */
+    /** requestId 必填；不需要定位時只帶識別碼。 */
     @PostMapping("/clock-in")
     public AttendanceRecordResponse clockIn(@AuthenticationPrincipal EmployeeUserDetails principal,
-                                            @Valid @RequestBody(required = false) ClockLocationRequest location) {
+                                            @Valid @RequestBody ClockLocationRequest location) {
         return attendanceService.clockIn(principal.getEmployeeId(), location);
     }
 
     @PostMapping("/clock-out")
     public AttendanceRecordResponse clockOut(@AuthenticationPrincipal EmployeeUserDetails principal,
-                                             @Valid @RequestBody(required = false) ClockLocationRequest location) {
+                                             @Valid @RequestBody ClockLocationRequest location) {
         return attendanceService.clockOut(principal.getEmployeeId(), location);
     }
 

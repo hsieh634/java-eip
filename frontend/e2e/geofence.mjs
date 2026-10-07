@@ -172,7 +172,7 @@ try {
     check('G3 員工 A 的畫面還沒重新整理（仍顯示不需要定位）', (await A.page.$eval('[data-testid=location-policy]', (el) => el.dataset.required)) === 'none')
     await geo(A.page, { mode: 'success', ...northOf(40), accuracy: 12 })
     await click(A.page, '下班打卡')
-    await waitStatus(A.page, '今日已完成')
+    await waitStatus(A.page, '目前已下班，可再次上班')
     check('G3 按下時重新取得設定 → 這次有呼叫定位、帶位置送出並成功', (await geoState(A.page)).calls === 1 && A.counts.out === 1)
     check('G3 打卡後卡片更新為「需要定位」的說明', (await A.page.$eval('[data-testid=location-policy]', (el) => el.dataset.required)) === 'inout')
     await assertNoUnhandled('G3', [A.tracker])
@@ -238,7 +238,7 @@ try {
     })
     await page.waitForSelector('[data-testid=clock-phase][data-phase=locating]')
     check('G4 定位中：顯示「正在取得位置…」，按鈕停用', (await page.$eval('[data-testid=clock-phase]', (el) => el.textContent)).includes('正在取得位置') && (await hasButton(page, '正在取得位置…')))
-    await waitStatus(page, '今日已完成')
+    await waitStatus(page, '目前已下班，可再次上班')
     check('G4 快速連按兩次 → 只定位一次、只送出一次下班', (await geoState(page)).calls === callsBefore + 1 && C.counts.out === outBefore + 1,
       JSON.stringify({ calls: (await geoState(page)).calls - callsBefore, posts: C.counts.out - outBefore }))
     await geo(page, { delayMs: 0 })
@@ -291,7 +291,7 @@ try {
     check('G6 送出時後端使用新設定：80 公尺 > 50 → 拒絕，訊息顯示允許範圍 50 公尺', text.includes('允許範圍是 50 公尺') && (await todayStatus(page)) === '工作中', text)
     await geo(page, { ...northOf(20), delayMs: 0 })
     await click(page, '重試下班打卡')
-    await waitStatus(page, '今日已完成')
+    await waitStatus(page, '目前已下班，可再次上班')
     check('G6 在新範圍內（20 公尺）重試 → 下班成功', B.counts.out === 2)
     await putSettingsViaApi(admin.page, { radiusMeters: 100 }, `E2E 恢復半徑 ${stack.runId}`)
   }
@@ -319,7 +319,7 @@ try {
     const page = C.page
     await page.bringToFront()
     await page.goto(`${stack.baseUrl}/#/attendance`, { waitUntil: 'networkidle0' })
-    await waitStatus(page, '今日已完成')
+    await waitStatus(page, '目前已下班，可再次上班')
     const callsBefore = (await geoState(page)).calls
     await click(page, '申請撤銷下班打卡')
     await setValue(page, '#reason-text', '還在工作，誤按下班（人在公司外也能提出）')

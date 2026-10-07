@@ -1,10 +1,11 @@
 import { api } from './http'
+import { ApiError } from './http'
 
 export type AttendanceStatus = 'NOT_STARTED' | 'WORKING' | 'COMPLETED' | 'INCOMPLETE' | 'VOIDED'
 
 /** 對應後端 AttendanceRecordResponse。時間是 ISO 8601（UTC）。 */
 export interface AttendanceRecord {
-  /** 同一個日期可能有多筆（已作廢的舊紀錄＋有效紀錄），所以列表的 key 要用 id，不能只用日期。 */
+  /** 同一日期可能有多組有效或作廢紀錄，列表的 key 使用 id。 */
   id: number
   workDate: string
   clockInAt: string
@@ -53,6 +54,8 @@ export interface TodayAttendance {
   recordId: number | null
   version: number | null
   locationPolicy: LocationPolicy
+  records: AttendanceRecord[]
+  completedSeconds: number
 }
 
 export interface AttendanceList {
@@ -65,11 +68,23 @@ export interface AttendanceList {
 // 所有請求都不帶員工 ID、日期或時間：身份來自 Session，時間由後端決定。
 export const fetchToday = () => api<TodayAttendance>('/api/attendance/me/today')
 export const fetchLocationPolicy = () => api<LocationPolicy>('/api/attendance/location-policy')
-/** 不需要定位時不帶本文（與 T03 相同）；需要時只帶瀏覽器的原始定位資料。 */
-export const clockIn = (location?: ClockLocation) =>
-  api<AttendanceRecord>('/api/attendance/clock-in', { method: 'POST', body: location })
-export const clockOut = (location?: ClockLocation) =>
-  api<AttendanceRecord>('/api/attendance/clock-out', { method: 'POST', body: location })
+export type ClockSubmission = Partial<ClockLocation> & { requestId: string; expectedAttendanceId?: number; expectedVersion?: number }
+async function clock(action: 'in' | 'out', body: ClockSubmission): Promise<AttendanceRecord> {
+  const raw = await api<unknown>(`/api/attendance/clock-${action}`, { method: 'POST', body })
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new ApiError(0, 'UNCONFIRMED_RESULT', '無法確認打卡成功回應')
+  const r = raw as Record<string, unknown>
+  if (r.requestId !== body.requestId || typeof r.id !== 'number' || !Number.isSafeInteger(r.id) || r.id <= 0 ||
+      typeof r.version !== 'number' || !Number.isSafeInteger(r.version) || r.version < 0 ||
+      typeof r.workDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.workDate) ||
+      typeof r.clockInAt !== 'string' || !Number.isFinite(Date.parse(r.clockInAt)) ||
+      (action === 'in' ? r.status !== 'WORKING' || r.clockOutAt !== null :
+        r.status !== 'COMPLETED' || typeof r.clockOutAt !== 'string' || !Number.isFinite(Date.parse(r.clockOutAt)) || r.id !== body.expectedAttendanceId) ||
+      !['CLOCK', 'MANUAL'].includes(String(r.source)) || typeof r.corrected !== 'boolean' || r.voidedAt !== null)
+    throw new ApiError(0, 'UNCONFIRMED_RESULT', '無法確認打卡成功回應')
+  return raw as AttendanceRecord
+}
+export const clockIn = (body: ClockSubmission) => clock('in', body)
+export const clockOut = (body: ClockSubmission) => clock('out', body)
 
 /** 不給範圍＝由後端決定預設（本月）。 */
 export const fetchRecords = (range?: { from: string; to: string }) =>

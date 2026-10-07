@@ -59,6 +59,24 @@ public class TestBrowser {
     }
 
     public Reply postWithCsrf(String path, String jsonBody, String csrfHeader) {
+        // 舊測試每次 post 代表新的打卡意圖；明確提供 requestId 的去重測試則完全保留本文。
+        if (path.equals("/api/attendance/clock-in") || path.equals("/api/attendance/clock-out")) {
+            var mapper = new JsonMapper();
+            if (jsonBody == null || jsonBody.isBlank()) jsonBody = "{}";
+            var body = mapper.readTree(jsonBody);
+            if (body.isObject() && !body.has("requestId")) {
+                var object = (tools.jackson.databind.node.ObjectNode) body;
+                object.put("requestId", java.util.UUID.randomUUID().toString());
+                if (path.endsWith("clock-out")) {
+                    var today = get("/api/attendance/me/today").json();
+                    if (today.has("recordId") && !today.get("recordId").isNull()) {
+                        object.put("expectedAttendanceId", today.get("recordId").asLong());
+                        object.put("expectedVersion", today.get("version").asLong());
+                    }
+                }
+                jsonBody = mapper.writeValueAsString(body);
+            }
+        }
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + path))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody == null ? "" : jsonBody));

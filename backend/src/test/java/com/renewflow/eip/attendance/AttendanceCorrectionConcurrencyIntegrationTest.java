@@ -141,7 +141,7 @@ class AttendanceCorrectionConcurrencyIntegrationTest extends CorrectionsTestBase
     }
 
     @Test
-    @DisplayName("C-15 核准更正時間 與 員工下班 並行（6 輪）：下班永遠成功且保留；上班時間改成申請值，若且唯若核准成功")
+    @DisplayName("C-15 核准更正時間與員工下班並行（6 輪）：下班先成功則申請過時；核准先成功則原下班版本過時，重查後可下班")
     void approveCorrectionRacesWithClockOut() throws Exception {
         TestBrowser aliceB = loginAs("alice");
         TestBrowser carolB = loginAs("carol");
@@ -158,11 +158,15 @@ class AttendanceCorrectionConcurrencyIntegrationTest extends CorrectionsTestBase
             Reply approval = replies.get(0);
             Reply clockOut = replies.get(1);
 
-            // 核准先：改成申請值（下班被清空）→ 再下班成功；下班先：核准過時。下班永遠成功。
-            assertThat(clockOut.status()).as("round %d clockOut %s", round, clockOut.body()).isEqualTo(200);
-            assertThat(approval.status() == 200 || (approval.status() == 409 && approval.code().equals("REQUEST_STALE")))
-                    .as("round %d approve %s", round, approval.body()).isTrue();
-            assertThat(activeColumn(alice, day, "clock_out_at")).as("下班時間沒有被核准覆蓋掉").isNotNull().isNotEqualTo("<none>");
+            // 舊下班快照若在核准後才套用，必須拒絕，不能覆蓋已更正版本。
+            assertThat(clockOut.status() == 200 || (clockOut.status() == 409 && clockOut.code().equals("RECORD_CHANGED"))).isTrue();
+            assertThat(approval.status() == 200 || (approval.status() == 409 && approval.code().equals("REQUEST_STALE"))).isTrue();
+            if (clockOut.status() == 200) assertThat(activeColumn(alice, day, "clock_out_at")).isNotNull().isNotEqualTo("<none>");
+            else {
+                assertThat(approval.status()).isEqualTo(200);
+                assertThat(activeColumn(alice, day, "clock_out_at")).isNull();
+                assertThat(aliceB.post(CLOCK_OUT, null).status()).as("重新查詢新版本後可正常下班").isEqualTo(200);
+            }
             boolean timeWasCorrected = activeColumn(alice, day, "clock_in_at").startsWith(day + " 00:30:00");
             assertThat(timeWasCorrected).as("round %d：上班時間被更正 ⇔ 核准成功", round).isEqualTo(approval.status() == 200);
             assertThat(jdbc.queryForObject("select count(*) from attendance where employee_id = ? and work_date = ?::date and voided_at is null", Integer.class, alice.getId(), day)).isEqualTo(1);

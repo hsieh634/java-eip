@@ -143,7 +143,7 @@ class ReviewRound1IntegrationTest extends CorrectionsTestBase {
         Reply sawNothing = aliceB.post(REQUESTS, json("type", str("CORRECT_TIME"), "workDate", str("2026-09-30"),
                 "clockInTime", str("08:00:00"), "clockOutTime", "null", "reason", str("我以為沒紀錄")));
         assertThat(sawNothing.status()).isEqualTo(409);
-        assertThat(sawNothing.code()).isEqualTo("RECORD_CHANGED");
+        assertThat(sawNothing.code()).isEqualTo("ATTENDANCE_OVERLAP");
 
         Reply incomplete = aliceB.post(REQUESTS, json("type", str("CORRECT_TIME"), "workDate", str("2026-09-30"),
                 "clockInTime", str("08:00:00"), "reason", str("只有 ID"), "expectedAttendanceId", String.valueOf(activeId(alice, "2026-09-30"))));

@@ -9,6 +9,7 @@ import { newRequestId } from '../lib/requestId'
 import { formatWorkDate, inclusiveDays, taipeiToday } from '../lib/time'
 import { useLifetime, type Lifetime } from '../lib/useLifetime'
 import { useLoad } from '../lib/useLoad'
+import { confirmsDuplicate } from '../timesheet/submitOutcome'
 
 const MAX_RANGE_DAYS = 31 // 與後端一致；後端仍會自行驗證
 
@@ -94,6 +95,12 @@ export function TimesheetPage() {
   const [rangeError, setRangeError] = useState<string | null>(null)
   const [mode, setMode] = useState<FormMode>({ kind: 'new', seq: 0 })
   const [notice, setNotice] = useState<string | null>(null)
+  const creationLock = useRef(false)
+  const [creationLocked, setCreationLocked] = useState(false)
+  const lockCreation = useCallback((locked: boolean) => {
+    creationLock.current = locked
+    setCreationLocked(locked)
+  }, [])
 
   const listKey = applied ? `${applied.from}|${applied.to}|${applied.seq}` : 'default'
   const list = useLoad(() => fetchTimesheets(applied ?? undefined), `timesheets:${listKey}`)
@@ -110,6 +117,7 @@ export function TimesheetPage() {
 
   /** 新增或修改完成：以後端資料重新整理清單與合計；新增表單換一個新的 requestId。 */
   function saved(message: string) {
+    lockCreation(false)
     setNotice(message)
     setMode((m) => ({ kind: 'new', seq: (m.kind === 'new' ? m.seq : 0) + 1 }))
     list.refetch()
@@ -170,7 +178,8 @@ export function TimesheetPage() {
               onCancel={null}
               onProjectsStale={projects.reload}
               onListStale={list.refetch}
-              onReset={() => setMode((m) => ({ kind: 'new', seq: (m.kind === 'new' ? m.seq : 0) + 1 }))}
+              onCreationLock={lockCreation}
+              onReset={() => { lockCreation(false); setMode((m) => ({ kind: 'new', seq: (m.kind === 'new' ? m.seq : 0) + 1 })) }}
             />
           )}
           {selectable && mode.kind === 'edit' && (
@@ -230,14 +239,15 @@ export function TimesheetPage() {
               </button>
             </div>
           )}
-          {data && <TimesheetTable data={data} onEdit={(id) => setMode({ kind: 'edit', id })} />}
+          {creationLocked && <p className="muted small">新增工時正在送出或原提交尚未確認；確認結果或明確放棄追蹤後，才能切換修改其他紀錄。</p>}
+          {data && <TimesheetTable data={data} editDisabled={creationLocked} onEdit={(id) => { if (!creationLock.current) setMode({ kind: 'edit', id }) }} />}
         </section>
       </div>
     </>
   )
 }
 
-function TimesheetTable({ data, onEdit }: Readonly<{ data: TimesheetList; onEdit: (id: number) => void }>) {
+function TimesheetTable({ data, onEdit, editDisabled }: Readonly<{ data: TimesheetList; onEdit: (id: number) => void; editDisabled: boolean }>) {
   return (
     <>
       <p data-testid="timesheet-range" className="small">
@@ -276,7 +286,7 @@ function TimesheetTable({ data, onEdit }: Readonly<{ data: TimesheetList; onEdit
                   </td>
                   <td data-label="時數">{formatMinutes(e.minutes)}</td>
                   <td data-label="操作">
-                    <button type="button" className="btn btn--small" onClick={() => onEdit(e.id)}>
+                    <button type="button" className="btn btn--small" disabled={editDisabled} onClick={() => onEdit(e.id)}>
                       修改
                     </button>
                   </td>
@@ -350,6 +360,7 @@ interface EntryFieldsProps extends FormCallbacks {
   onReset: (() => void) | null
   /** 修改模式：版本衝突時重新載入這一筆 */
   onReload?: () => void
+  onCreationLock?: (locked: boolean) => void
 }
 
 /**
@@ -372,7 +383,7 @@ interface Submission {
   minutes: number
 }
 
-function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onReload, onProjectsStale, onListStale }: Readonly<EntryFieldsProps>) {
+function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onReload, onProjectsStale, onListStale, onCreationLock }: Readonly<EntryFieldsProps>) {
   const messageOf = useApiErrorMessage()
   const lifetime = useLifetime()
   // 這一次「邏輯上的新增」的識別碼。只會用來送出「同一份內容」：結果不明時鎖定表單、重送原內容；
@@ -414,6 +425,7 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
 
   /** retrying：這次送出的是未確認快照（pending）的重試。 */
   async function send(values: Submission, retrying: boolean) {
+    if (!entry) onCreationLock?.(true)
     submitting.current = true
     setPhase('submitting')
     setError(null)
@@ -427,7 +439,7 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
     } catch (e) {
       if (!life.alive) return
       submitting.current = false
-      if (e instanceof ApiError && e.code === 'DUPLICATE_SUBMISSION') {
+      if (confirmsDuplicate(e) && e instanceof ApiError) {
         // 只代表「原提交已經存在」——而送出的正是原提交（表單一直鎖定），所以沒有任何未儲存的新內容被丟掉
         onDone(`原提交已經建立（紀錄 #${String(e.details.entryId)}），沒有重複新增。若要更改內容，請在下方清單按「修改」。`)
         return
@@ -459,6 +471,7 @@ function EntryFields({ entry, projects, today, onDone, onCancel, onReset, onRelo
       }
       setPending(null)
       setPhase('editing')
+      if (!entry) onCreationLock?.(false)
       if (e instanceof ApiError && e.code === 'TIMESHEET_CHANGED') {
         setConflict(true)
         setError('這筆紀錄已在其他分頁或裝置被修改，你的變更沒有儲存。請重新載入最新內容後再修改。')

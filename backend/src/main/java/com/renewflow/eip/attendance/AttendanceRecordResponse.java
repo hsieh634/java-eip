@@ -20,7 +20,13 @@ public record AttendanceRecordResponse(
         String source,
         boolean corrected,
         Instant voidedAt,
-        long version) {
+        long version,
+        java.util.UUID requestId) {
+
+    /** 打卡回應帶原識別碼；一般查詢沒有提交識別碼。 */
+    AttendanceRecordResponse withRequestId(java.util.UUID key) {
+        return new AttendanceRecordResponse(id, workDate, clockInAt, clockOutAt, status, source, corrected, voidedAt, version, key);
+    }
 
     /** @param today 今日業務日期：用來判斷「沒下班」是進行中（今日）還是未完成（過去）。 */
     static AttendanceRecordResponse from(Attendance attendance, LocalDate today) {
@@ -37,6 +43,6 @@ public record AttendanceRecordResponse(
         return new AttendanceRecordResponse(
                 attendance.getId(), attendance.getWorkDate(), attendance.getClockInAt(), attendance.getClockOutAt(),
                 status, attendance.getSource(), attendance.getCorrectedAt() != null,
-                attendance.getVoidedAt(), attendance.getVersion());
+                attendance.getVoidedAt(), attendance.getVersion(), null);
     }
 }

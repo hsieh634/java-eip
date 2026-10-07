@@ -26,23 +26,26 @@ public class AttendanceRequestService {
     private final AttendanceAuditLog auditLog;
     private final AttendanceViews views;
     private final Clock clock;
+    private final AttendanceWriteRules rules;
 
     AttendanceRequestService(AttendanceRepository attendanceRepository,
                              AttendanceRequestRepository requestRepository,
                              AttendanceHistoryRepository historyRepository,
                              AttendanceAuditLog auditLog,
                              AttendanceViews views,
-                             Clock clock) {
+                             Clock clock, AttendanceWriteRules rules) {
         this.attendanceRepository = attendanceRepository;
         this.requestRepository = requestRepository;
         this.historyRepository = historyRepository;
         this.auditLog = auditLog;
         this.views = views;
         this.clock = clock;
+        this.rules = rules;
     }
 
     @Transactional
     public AttendanceRequestResponse submit(Long employeeId, CreateRequest body) {
+        rules.lock(employeeId);
         Instant now = BusinessTime.truncateToDatabasePrecision(clock.instant());
         LocalDate today = BusinessTime.workDateOf(now);
         String reason = body.reason().trim();
@@ -61,8 +64,8 @@ public class AttendanceRequestService {
         Instant requestedOut = null;
         if (body.type() == AttendanceRequestType.RESET_TODAY) {
             workDate = today; // 重新打卡只針對「今日」，日期由伺服器決定
-            target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today).orElse(null);
-            if (target == null && !hasSnapshot) {
+            target = target(employeeId, today, body.expectedAttendanceId());
+            if (!hasSnapshot && attendanceRepository.findAllByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByClockInAtAscIdAsc(employeeId, today).isEmpty()) {
                 throw new AttendanceConflictException("NO_RECORD_TO_RESET", "今日沒有出勤紀錄，不需要申請重新打卡");
             }
             if (!hasSnapshot) {
@@ -77,8 +80,9 @@ public class AttendanceRequestService {
             requestedIn = AttendanceTimes.toInstant(workDate, body.clockInTime());
             requestedOut = AttendanceTimes.toInstant(workDate, body.clockOutTime());
             AttendanceTimes.validate(workDate, requestedIn, requestedOut, now, today);
-            target = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, workDate).orElse(null);
+            target = target(employeeId, workDate, body.expectedAttendanceId());
             requireSameSnapshot(target, body);
+            rules.validate(employeeId, workDate, body.expectedAttendanceId(), requestedIn, requestedOut);
             if (target != null && Objects.equals(target.getClockInAt(), requestedIn)
                     && Objects.equals(target.getClockOutAt(), requestedOut)) {
                 throw new InvalidRequestException("申請的時間與目前的紀錄相同，沒有需要更正的內容");
@@ -99,9 +103,15 @@ public class AttendanceRequestService {
         return views.request(requestRepository.findById(id).orElseThrow(), today);
     }
 
+    private Attendance target(Long employeeId, LocalDate date, Long id) {
+        if (id == null) return null; // 明確補登，不以同日其他紀錄替換目標
+        return attendanceRepository.findById(id).filter(a -> a.getEmployeeId().equals(employeeId))
+                .filter(a -> a.getWorkDate().equals(date)).filter(a -> !a.isVoided()).orElse(null);
+    }
+
     /**
      * 表單快照必須與「現在」的有效紀錄一致：帶了 ID／版本 → 必須正是那一筆、那個版本；
-     * 沒帶 → 表單看到的是「沒有紀錄」，現在也必須沒有。否則代表員工看的是過期畫面（例如讀取表單後紀錄被更正、
+     * 沒帶 → 明確申請補登新時段，跨列合法性另在同一鎖內驗證。若指定目標不符則代表過期畫面（例如紀錄被更正、
      * 被作廢並重新打卡），不能用舊的時間提出申請。
      */
     private static void requireSameSnapshot(Attendance current, CreateRequest body) {
@@ -117,6 +127,7 @@ public class AttendanceRequestService {
     /** 撤回自己的待審申請。別人的申請一律回 404（不洩漏是否存在）。 */
     @Transactional
     public AttendanceRequestResponse cancel(Long employeeId, Long requestId) {
+        rules.lock(employeeId);
         Instant now = BusinessTime.truncateToDatabasePrecision(clock.instant());
         int updated = requestRepository.cancel(requestId, employeeId, now);
         if (updated == 0) {

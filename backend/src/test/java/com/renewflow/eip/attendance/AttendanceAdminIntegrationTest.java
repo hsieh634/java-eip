@@ -98,7 +98,7 @@ class AttendanceAdminIntegrationTest extends CorrectionsTestBase {
         punch(aliceB, CLOCK_OUT, "2026-10-01T07:00:00Z");
         assertThat(activeRows(alice)).isEqualTo(1);
         assertThat(voidedRows(alice)).isEqualTo(1);
-        assertThat(aliceB.post(CLOCK_IN, null).code()).as("新的紀錄仍受每日一組限制").isEqualTo("ALREADY_CLOCKED_IN");
+        assertThat(aliceB.get(TODAY).json().get("records").size()).as("完成後仍可再次上班，作廢歷史保留").isEqualTo(2);
 
         // 列表同時含兩筆（有效＋作廢），同日期以 id 區分
         Reply list = aliceB.get("/api/attendance/me?from=2026-10-01&to=2026-10-01");
@@ -389,7 +389,7 @@ class AttendanceAdminIntegrationTest extends CorrectionsTestBase {
         assertThat(wrongVersion.status()).isEqualTo(409);
         assertThat(wrongVersion.code()).isEqualTo("RECORD_CHANGED");
         assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", activeId(alice, "2026-10-01"), version, "20:00:00", null, "未來時間")).code()).isEqualTo("INVALID_REQUEST");
-        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", null, null, "08:30:00", null, "該日已有紀錄卻要建立")).code()).isEqualTo("RECORD_CHANGED");
+        assertThat(carolB.post(path, correctionBody(alice.getId(), "2026-10-01", null, null, "08:30:00", null, "與既有時段重疊的補登")).code()).isEqualTo("ATTENDANCE_OVERLAP");
 
         assertThat(activeColumn(alice, "2026-10-01", "clock_in_at")).as("以上全部被擋，紀錄沒有被改").startsWith("2026-10-01 01:00:00");
         assertThat(historyRows()).as("被擋下的操作不寫歷程").isZero();

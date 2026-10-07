@@ -63,7 +63,7 @@ class AttendanceRequestIntegrationTest extends CorrectionsTestBase {
         // 申請不會立即更動打卡紀錄，也不會開放按鈕
         assertThat(aliceB.get(TODAY).json().get("status").asString()).isEqualTo("COMPLETED");
         assertThat(activeVersion(alice, "2026-10-01")).isEqualTo(versionBefore);
-        assertThat(aliceB.post(CLOCK_IN, null).code()).isEqualTo("ALREADY_CLOCKED_IN");
+        assertThat(aliceB.post(CLOCK_OUT, null).code()).isEqualTo("ALREADY_CLOCKED_OUT");
         assertThat(activeRows(alice)).isEqualTo(1);
         assertThat(voidedRows(alice)).isZero();
     }

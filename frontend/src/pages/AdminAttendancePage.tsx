@@ -468,7 +468,7 @@ function VoidDialog({ employeeId, employeeName, record, onClose, onDone }: Reado
         <dt>原值</dt>
         <dd>{describeTimes({ clockInAt: record.clockInAt, clockOutAt: record.clockOutAt })}</dd>
         <dt>預計結果</dt>
-        <dd data-testid="expected-outcome">原紀錄標為作廢（原時間保留），今日回到「尚未上班」，員工可重新打卡一組。這不是刪除。</dd>
+        <dd data-testid="expected-outcome">所選 #{record.id}（版本 {record.version}）標為作廢，原時間與事件保留，其他組不變；目前沒有有效未完成時段時，可再次上班。</dd>
       </dl>
       <label htmlFor="void-reason">原因（必填）</label>
       <textarea id="void-reason" rows={2} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />

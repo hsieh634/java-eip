@@ -43,13 +43,13 @@ class AttendanceSchemaTest extends AttendanceTestBase {
     void cleanDatabaseHasV2() {
         List<String> versions = jdbc.queryForList(
                 "select version from flyway_schema_history where success order by installed_rank", String.class);
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
 
         List<String> constraints = jdbc.queryForList(
                 "select conname from pg_constraint where conrelid = 'attendance'::regclass", String.class);
         assertThat(constraints).contains("ck_attendance_clock_out_after_in", "ck_attendance_source", "ck_attendance_void_pair")
                 .as("V3 移除了無條件的唯一限制").doesNotContain("uq_attendance_employee_work_date");
-        assertThat(jdbc.queryForObject("select indexdef from pg_indexes where indexname = 'uq_attendance_active_employee_work_date'", String.class))
+        assertThat(jdbc.queryForObject("select indexdef from pg_indexes where indexname = 'uq_attendance_open_employee_work_date'", String.class))
                 .as("每人每日最多一筆有效紀錄的部分唯一索引").containsIgnoringCase("UNIQUE").containsIgnoringCase("voided_at IS NULL");
         List<String> fkDeleteRules = jdbc.queryForList("""
                 select rc.delete_rule from information_schema.referential_constraints rc
@@ -119,7 +119,7 @@ class AttendanceSchemaTest extends AttendanceTestBase {
             assertThat(jdbc.queryForObject("select count(*) from " + schema + ".employee where username = 'legacy'", Integer.class))
                     .as("既有員工資料保留").isEqualTo(1);
             assertThat(jdbc.queryForList("select version from " + schema + ".flyway_schema_history where success and version is not null order by installed_rank",
-                    String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7");
+                    String.class)).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
             // 升級後新表可用，且外鍵指向既有員工
             jdbc.update("insert into " + schema + ".attendance (employee_id, work_date, clock_in_at)"
                     + " select id, date '2026-10-01', now() from " + schema + ".employee where username = 'legacy'");

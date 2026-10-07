@@ -10,72 +10,68 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * 出勤使用案例。員工 ID 一律由呼叫端（Controller 取自 Session）傳入；時間一律來自注入的 Clock。
- * 業務衝突以 {@link AttendanceRuleException} 表示；其他例外（資料庫故障等）不在此轉換，維持 5xx。
- *
- * <p>T03.2：打卡交易的順序是「定位關卡（鎖住設定快照並驗證）→ 原本的原子打卡 SQL → 寫入打卡證據」，
- * 三者在同一個交易內：定位被拒絕時還沒有寫入任何東西；證據寫入失敗時出勤一起回滾。
- */
+/** 出勤、原始事件與去重快照同交易；所有寫入使用一致的鎖順序。 */
 @Service
 public class AttendanceService {
-
     private final AttendanceRepository attendanceRepository;
     private final GeofenceGate geofenceGate;
     private final ClockEventLog clockEventLog;
     private final Clock clock;
-
-    public AttendanceService(AttendanceRepository attendanceRepository, GeofenceGate geofenceGate, ClockEventLog clockEventLog, Clock clock) {
+    private final AttendanceWriteRules rules;
+    private final AttendanceClockSubmissions submissions;
+    public AttendanceService(AttendanceRepository attendanceRepository, GeofenceGate geofenceGate,
+                             ClockEventLog clockEventLog, Clock clock, AttendanceWriteRules rules,
+                             AttendanceClockSubmissions submissions) {
         this.attendanceRepository = attendanceRepository;
         this.geofenceGate = geofenceGate;
         this.clockEventLog = clockEventLog;
         this.clock = clock;
+        this.rules = rules;
+        this.submissions = submissions;
     }
-
-    /** 上班打卡。location 可為 null（不受定位限制時沿用無本文的請求）。 */
     @Transactional
-    public AttendanceRecordResponse clockIn(Long employeeId, ClockLocationRequest location) {
-        Instant now = now();
-        LocalDate today = BusinessTime.workDateOf(now);
-        // 先過定位關卡：被拒絕時丟出例外，出勤、版本、證據都還沒被動到
-        LocationDecision decision = geofenceGate.checkForClock(ClockAction.CLOCK_IN, location, now);
-
-        int inserted = attendanceRepository.insertIfAbsent(employeeId, today, now);
-        if (inserted == 0) {
-            // 衝突不會讓交易失效，所以可以在同一個交易內查詢原因，給出精準的訊息
-            boolean alreadyCompleted = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
-                    .map(a -> a.getClockOutAt() != null)
-                    .orElse(false);
-            throw new AttendanceRuleException(Rule.ALREADY_CLOCKED_IN,
-                    alreadyCompleted ? "今日已完成上下班，無法再次上班" : "今日已經上班打卡");
-        }
-        return recordWithEvidence(employeeId, today, ClockAction.CLOCK_IN, now, decision);
-    }
-
-    /** 下班打卡：只處理「今日」的紀錄，不替昨日補登。 */
+    public AttendanceRecordResponse clockIn(Long employeeId, ClockLocationRequest body) { return write(employeeId, body, ClockAction.CLOCK_IN); }
     @Transactional
-    public AttendanceRecordResponse clockOut(Long employeeId, ClockLocationRequest location) {
-        Instant now = now();
-        LocalDate today = BusinessTime.workDateOf(now);
-        LocationDecision decision = geofenceGate.checkForClock(ClockAction.CLOCK_OUT, location, now);
+    public AttendanceRecordResponse clockOut(Long employeeId, ClockLocationRequest body) { return write(employeeId, body, ClockAction.CLOCK_OUT); }
 
-        int updated = attendanceRepository.clockOutIfOpen(employeeId, today, now);
-        if (updated == 0) {
-            Attendance current = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today).orElse(null);
-            if (current == null) {
-                throw new AttendanceRuleException(Rule.CLOCK_IN_REQUIRED, "今日尚未上班打卡，無法下班打卡");
+    private AttendanceRecordResponse write(Long employeeId, ClockLocationRequest body, ClockAction action) {
+        rules.lock(employeeId);
+        if (body == null || body.requestId() == null) throw new InvalidRequestException("打卡必須提供 requestId");
+        String fingerprint = submissions.fingerprint(body);
+        AttendanceRecordResponse replay = submissions.replay(employeeId, body, action, fingerprint);
+        if (replay != null) return replay; // 已確認原操作：不重新定位、不寫第二個事件
+        Instant now = now(); // 等待鎖之後取時間，避免排隊期間跨日
+        LocalDate today = BusinessTime.workDateOf(now);
+        var decision = geofenceGate.checkForClock(action, body, now);
+        Attendance open = attendanceRepository.findFirstByEmployeeIdAndWorkDateAndClockOutAtIsNullAndVoidedAtIsNull(employeeId, today).orElse(null);
+        Long targetId;
+        if (action == ClockAction.CLOCK_IN) {
+            if (open != null) throw new AttendanceRuleException(Rule.ALREADY_CLOCKED_IN, "目前已有未下班時段，請先下班");
+            rules.validate(employeeId, today, null, now, null);
+            if (attendanceRepository.insertIfAbsent(employeeId, today, now) != 1) throw new AttendanceRuleException(Rule.ALREADY_CLOCKED_IN, "目前已有未下班時段");
+            targetId = attendanceRepository.findFirstByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByIdDesc(employeeId, today).orElseThrow().getId();
+        } else {
+            if (open == null) {
+                boolean completed = !attendanceRepository.findAllByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByClockInAtAscIdAsc(employeeId, today).isEmpty();
+                throw new AttendanceRuleException(completed ? Rule.ALREADY_CLOCKED_OUT : Rule.CLOCK_IN_REQUIRED, "目前沒有未下班時段，無法下班打卡");
             }
-            if (current.getClockOutAt() != null) {
-                throw new AttendanceRuleException(Rule.ALREADY_CLOCKED_OUT, "今日已經下班打卡");
-            }
-            // 有紀錄、未下班、卻更新 0 筆：只剩「下班時間早於上班時間」，代表伺服器時鐘倒退（假設 A-14）
-            throw new IllegalStateException("system clock is earlier than the recorded clock-in time");
+            if (body.expectedAttendanceId() == null || body.expectedVersion() == null) throw new InvalidRequestException("下班必須指定時段 ID 與版本");
+            if (!open.getId().equals(body.expectedAttendanceId()) || open.getVersion() != body.expectedVersion())
+                throw new AttendanceConflictException("RECORD_CHANGED", "下班目標已變更，請重新查詢；不會改動另一組時段");
+            if (now.isBefore(open.getClockInAt())) throw new IllegalStateException("system clock is earlier than the recorded clock-in time");
+            targetId = open.getId();
+            rules.validate(employeeId, today, targetId, open.getClockInAt(), now);
+            if (attendanceRepository.clockOutIfOpen(employeeId, today, now, targetId, open.getVersion()) != 1) throw new IllegalStateException("open attendance write failed");
         }
-        return recordWithEvidence(employeeId, today, ClockAction.CLOCK_OUT, now, decision);
+        AttendanceRecordResponse response = AttendanceRecordResponse.from(attendanceRepository.findById(targetId).orElseThrow(), today).withRequestId(body.requestId());
+        clockEventLog.record(employeeId, targetId, action, now, decision);
+        submissions.record(employeeId, body, action, fingerprint, response);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -86,14 +82,16 @@ public class AttendanceService {
                 .map(Attendance::getWorkDate)
                 .orElse(null);
 
-        return attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
-                .map(a -> {
-                    AttendanceRecordResponse record = AttendanceRecordResponse.from(a, today);
-                    return new TodayAttendanceResponse(record.status(), today, BusinessTime.ZONE.getId(),
-                            a.getClockInAt(), a.getClockOutAt(), unfinishedBefore, a.getId(), a.getVersion(), geofenceGate.policy());
-                })
-                .orElseGet(() -> new TodayAttendanceResponse(AttendanceStatus.NOT_STARTED, today,
-                        BusinessTime.ZONE.getId(), null, null, unfinishedBefore, null, null, geofenceGate.policy()));
+        List<AttendanceRecordResponse> records = attendanceRepository.findByEmployeeIdAndWorkDateBetweenOrderByWorkDateDescIdDesc(employeeId, today, today)
+                .stream().map(a -> AttendanceRecordResponse.from(a, today))
+                .sorted(java.util.Comparator.comparing(AttendanceRecordResponse::clockInAt).thenComparing(AttendanceRecordResponse::id)).toList();
+        var active = records.stream().filter(r -> r.status() != AttendanceStatus.VOIDED).toList();
+        var current = active.stream().filter(r -> r.clockOutAt() == null).findFirst().orElse(active.isEmpty() ? null : active.getLast());
+        Duration total = active.stream().filter(r -> r.clockOutAt() != null)
+                .map(r -> Duration.between(r.clockInAt(), r.clockOutAt())).reduce(Duration.ZERO, Duration::plus);
+        return new TodayAttendanceResponse(current == null ? AttendanceStatus.NOT_STARTED : current.status(), today, BusinessTime.ZONE.getId(),
+                current == null ? null : current.clockInAt(), current == null ? null : current.clockOutAt(), unfinishedBefore,
+                current == null ? null : current.id(), current == null ? null : current.version(), geofenceGate.policy(), records, total.getSeconds());
     }
 
     /**
@@ -117,12 +115,4 @@ public class AttendanceService {
         return BusinessTime.truncateToDatabasePrecision(clock.instant());
     }
 
-    /** 打卡成功後：讀回剛寫入的紀錄，並在同一交易寫入打卡證據（含實際採用的設定快照）。 */
-    private AttendanceRecordResponse recordWithEvidence(Long employeeId, LocalDate today, ClockAction action,
-                                                        Instant now, LocationDecision decision) {
-        Attendance attendance = attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(employeeId, today)
-                .orElseThrow(() -> new IllegalStateException("attendance row missing right after a successful write"));
-        clockEventLog.record(employeeId, attendance.getId(), action, now, decision);
-        return AttendanceRecordResponse.from(attendance, today);
-    }
 }

@@ -10,6 +10,7 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | 規格（需求、架構、資料、API、安全、本階段 proposal／design／specification／tasks） | [docs/renewflow/](docs/renewflow/) |
 | T03 打卡規格 | [docs/renewflow/t03/](docs/renewflow/t03/) |
 | T03.1 更正／重新打卡／管理權限規格 | [docs/renewflow/t03-1/](docs/renewflow/t03-1/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t03-1/review-round-1.md)） |
+| T03.3 同日多組出勤、去重與工時未知結果修補 | [docs/renewflow/t03-3/](docs/renewflow/t03-3/)、[本輪教材](docs/learning/T03-3-multiple-attendance-and-submit-results.md) |
 | T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
 | T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（複審：[第 1 輪](docs/renewflow/t04/review-round-1.md)、[第 2 輪](docs/renewflow/t04/review-round-2.md)） |
 | T05 前置：組織與員工規格 | [docs/renewflow/t05-foundation/](docs/renewflow/t05-foundation/) |
@@ -169,13 +170,16 @@ curl.exe -s -b jar.txt http://localhost:8080/api/auth/me
 
 登出：`POST /api/auth/logout`（同樣需要 `X-XSRF-TOKEN`，成功回 204；登出後 Cookie 內的 token 已被換新，重新讀取 `jar.txt` 再用）。完整契約見 [docs/renewflow/05-api-design.md](docs/renewflow/05-api-design.md)。
 
-**出勤 API（T03）**——不接受員工 ID、日期或打卡時間，一律由 Session 與伺服器決定：
+**出勤 API（T03.3）**——不接受員工 ID、日期或打卡時間，一律由 Session 與伺服器決定：
 
 ```powershell
 curl.exe -s -b jar.txt http://localhost:8080/api/attendance/me/today                    # 今日狀態
 curl.exe -s -b jar.txt "http://localhost:8080/api/attendance/me?from=2026-10-01&to=2026-10-31"   # 本人紀錄（含已作廢；省略參數＝本月；最多 31 天）
-curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/api/attendance/clock-in
+curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" -H "Content-Type: application/json" `
+  -d '{\"requestId\":\"<本次 UUID>\"}' http://localhost:8080/api/attendance/clock-in
 ```
+
+打卡必填 requestId；下班另須指定 expectedAttendanceId＋expectedVersion。未知結果重試沿用原 UUID／本文，不改成新操作。完整契約見 [T03.3 API](docs/renewflow/t03-3/05-api-design.md)。
 
 **申請與管理 API（T03.1）**：員工端 `/api/attendance/requests`（提出、列出、撤回）與 `/api/attendance/me/history`；管理端 `/api/admin/attendance/**`（只有 ADMIN）。完整契約與錯誤碼見 [docs/renewflow/t03-1/04-api-design.md](docs/renewflow/t03-1/04-api-design.md)。
 
@@ -197,7 +201,7 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 
 ## 8. 目前限制
 
-本機學習規則（不代表任何公司制度）：固定白班、台北時區、每人每日最多一筆**有效**出勤；不支援跨日班、輪班、未來時間。誤按或漏打需透過申請（或管理員直接更正），且都會留下歷程；原始紀錄不會被硬刪。
+本機學習規則（不代表任何公司制度）：固定白班、台北時區、每人每日可有多組有效出勤、最多一筆有效未完成組；不支援跨日班、輪班、未來時間。誤按或漏打需透過申請（或管理員直接更正），且都會留下歷程；原始紀錄不會被硬刪。
 
 工時回報（T04）沒有簽核、刪除、匯出與專案成員限制；每日 24 小時只是資料合理性上限，不代表工時或加班規則。
 
@@ -217,8 +221,8 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" http://localhost:8080/a
 
 | 情況 | 用哪個 | 在哪裡 | 核准後 |
 |---|---|---|---|
-| 還在工作，卻誤按了下班 | **申請撤銷下班打卡** | 「今日打卡」卡片（只在已下班時出現） | 同一筆紀錄：上班時間完全不變、下班清空，恢復「工作中」，可再按下班 |
-| 今天整組都要重來（例如測試時誤按上下班，或上班打錯） | **申請整組作廢並重新打卡** | 「今日打卡」卡片（只有上班也可以） | 整筆紀錄作廢（原時間保留在歷程），今日回到「尚未上班」，要重新打上班與下班卡 |
+| 還在工作，卻誤按了下班 | **申請撤銷下班打卡** | 「今日打卡」卡片（先選所需的已下班時段） | 同一筆紀錄：上班時間完全不變、下班清空，恢復「工作中」，可再按下班 |
+| 今天整組都要重來（例如測試時誤按上下班，或上班打錯） | **申請整組作廢並重新打卡** | 「今日打卡」卡片（先選目標時段，只有上班也可以） | 所選一組作廢（原時間與事件保留），其他組不變；沒有有效未完成組時可再次上班 |
 | 時間不對、漏打卡、過去日期 | **申請更正／補登時間** | 「出勤打卡」頁的「我的出勤紀錄」 | 依你填的時間更正或補登 |
 
 沒有「只取消上班、保留下班」這種操作。每位員工同一天只能有一筆待審申請；過了今天就不能核准「整組作廢」，請改用更正／補登。
@@ -364,3 +368,7 @@ STMAX 是虛構的網站開發與數位行銷公司，帳號與姓名全部虛�
 4. 若某位員工的指定審核人之後被停用或改成員工，設定畫面的下拉選單會顯示「目前指定：姓名（員工編號）（已無效）」，這位員工此時無法送出請假。請直接改選「不指定（採直屬主管）」或另一位有效審核人，填原因後儲存；系統不會自動清除。
 5. **Max 自己的申請**不能由 Max 改派：畫面會提示需由另一位管理員操作（例如 `developer` 或 `admin`）。Max 也不能審核自己的申請。
 
+
+## T03.3 本輪驗證與交接
+
+多組出勤與工時成功本文故障回歸：`npm run e2e:multiple-attendance`、`npm run e2e:timesheets-success-body`。驗證範圍、數量與限制見 [verification.md](docs/renewflow/t03-3/verification.md)，接續開發見 [development-handoff.md](docs/renewflow/development-handoff.md)。程式更新後，使用者需自行重啟既有開發後端套用 V8；本輪沒有重啟使用者的 8080 服務。已套用 migration 不修改，資料庫與歷程保留。

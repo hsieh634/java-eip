@@ -43,7 +43,7 @@ export function AttendancePage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [rangeError, setRangeError] = useState<string | null>(null)
-  const [correction, setCorrection] = useState<{ date?: string } | null>(null)
+  const [correction, setCorrection] = useState<{ date?: string; id?: number } | null>(null)
   const [history, setHistory] = useState<HistoryState>({ kind: 'closed' })
 
   const [cardKey, setCardKey] = useState(0)
@@ -146,8 +146,9 @@ export function AttendancePage() {
 
             {correction && (
               <CorrectionForm
-                key={correction.date ?? 'new'}
+                key={`${correction.date ?? 'new'}:${correction.id ?? 'select'}`}
                 initialDate={correction.date}
+                initialRecordId={correction.id}
                 onSubmitted={() => {
                   setCorrection(null)
                   void requests.reload()
@@ -218,7 +219,7 @@ export function AttendancePage() {
                       </td>
                       <td data-label="操作">
                         {r.status !== 'VOIDED' && (
-                          <button type="button" className="btn btn--small" onClick={() => setCorrection({ date: r.workDate })}>
+                          <button type="button" className="btn btn--small" onClick={() => setCorrection({ date: r.workDate, id: r.id })}>
                             申請更正
                           </button>
                         )}

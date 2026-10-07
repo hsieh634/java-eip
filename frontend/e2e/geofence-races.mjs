@@ -93,7 +93,7 @@ async function clockInElsewhere(context) {
     const res = await fetch('/api/attendance/clock-in', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': token },
-      body: JSON.stringify({ ...loc, accuracy: 8, capturedAt: new Date().toISOString() }),
+      body: JSON.stringify({ requestId: crypto.randomUUID(), ...loc, accuracy: 8, capturedAt: new Date().toISOString() }),
     })
     return res.status
   }, northOf(20))

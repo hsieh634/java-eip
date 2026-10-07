@@ -38,6 +38,7 @@ public class AttendanceAdminService {
     private final AttendanceAuditLog auditLog;
     private final AttendanceViews views;
     private final Clock clock;
+    private final AttendanceWriteRules rules;
 
     AttendanceAdminService(AttendanceRepository attendanceRepository,
                            AttendanceRequestRepository requestRepository,
@@ -45,7 +46,7 @@ public class AttendanceAdminService {
                            EmployeeRepository employeeRepository,
                            AttendanceAuditLog auditLog,
                            AttendanceViews views,
-                           Clock clock) {
+                           Clock clock, AttendanceWriteRules rules) {
         this.attendanceRepository = attendanceRepository;
         this.requestRepository = requestRepository;
         this.historyRepository = historyRepository;
@@ -53,6 +54,7 @@ public class AttendanceAdminService {
         this.auditLog = auditLog;
         this.views = views;
         this.clock = clock;
+        this.rules = rules;
     }
 
     // ---------------- 審核 ----------------
@@ -61,6 +63,7 @@ public class AttendanceAdminService {
     public AttendanceRequestResponse approve(EmployeeUserDetails actor, Long requestId, String comment) {
         requireAdmin(actor);
         AttendanceRequest request = loadForReview(actor, requestId);
+        rules.lock(request.getEmployeeId());
         Instant now = now();
         LocalDate today = BusinessTime.workDateOf(now);
         String note = blankToNull(comment);
@@ -72,6 +75,7 @@ public class AttendanceAdminService {
 
         Attendance before = request.getTargetAttendanceId() == null ? null
                 : attendanceRepository.findById(request.getTargetAttendanceId()).orElse(null);
+        if (request.getTargetAttendanceId() != null && (before == null || before.isVoided() || before.getVersion() != request.getTargetVersion())) throw stale();
         Long attendanceId = request.getTargetAttendanceId();
         Instant afterIn;
         Instant afterOut;
@@ -92,17 +96,20 @@ public class AttendanceAdminService {
             afterIn = request.getRequestedClockInAt();
             afterOut = request.getRequestedClockOutAt();
             voided = false;
+            AttendanceTimes.validate(request.getWorkDate(), afterIn, afterOut, now, today);
+            try { rules.validate(request.getEmployeeId(), request.getWorkDate(), attendanceId, afterIn, afterOut); }
+            catch (AttendanceConflictException conflict) { throw stale(); }
             if (attendanceId != null) {
                 if (attendanceRepository.correctIfCurrent(attendanceId, request.getTargetVersion(), afterIn, afterOut, now) == 0) {
                     throw stale();
                 }
             } else {
-                // 原本沒有紀錄（補登）：該日仍沒有有效紀錄才建立；0 筆＝這段期間員工已經有紀錄了
+                // 補登缺少的時段：跨列合法性已在同一鎖內驗證，新增獨立 ID
                 if (attendanceRepository.insertManualIfAbsent(request.getEmployeeId(), request.getWorkDate(), afterIn, afterOut, now) == 0) {
                     throw stale();
                 }
                 attendanceId = attendanceRepository
-                        .findByEmployeeIdAndWorkDateAndVoidedAtIsNull(request.getEmployeeId(), request.getWorkDate())
+                        .findFirstByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByIdDesc(request.getEmployeeId(), request.getWorkDate())
                         .map(Attendance::getId).orElse(null);
             }
         }
@@ -120,6 +127,7 @@ public class AttendanceAdminService {
     public AttendanceRequestResponse reject(EmployeeUserDetails actor, Long requestId, String reason) {
         requireAdmin(actor);
         AttendanceRequest request = loadForReview(actor, requestId);
+        rules.lock(request.getEmployeeId());
         Instant now = now();
         String note = reason == null ? "" : reason.trim();
         if (note.isEmpty()) {
@@ -169,6 +177,7 @@ public class AttendanceAdminService {
     public AttendanceRecordResponse correctDirectly(EmployeeUserDetails actor, DirectCorrectionRequest body) {
         requireAdmin(actor);
         requireNotSelf(actor, body.employeeId());
+        rules.lock(body.employeeId());
         requireEmployee(body.employeeId());
         Instant now = now();
         LocalDate today = BusinessTime.workDateOf(now);
@@ -187,7 +196,8 @@ public class AttendanceAdminService {
 
         Attendance before = null;
         if (!correctingExisting) {
-            // 補登：該日必須沒有有效紀錄（部分唯一索引裁決；0 筆＝已經有了）
+            rules.validate(body.employeeId(), body.workDate(), null, clockIn, clockOut);
+            // 補登：保留同日其他組；未完成唯一索引仍為最後防線
             if (attendanceRepository.insertManualIfAbsent(body.employeeId(), body.workDate(), clockIn, clockOut, now) == 0) {
                 throw changed();
             }
@@ -204,6 +214,7 @@ public class AttendanceAdminService {
             if (Objects.equals(before.getClockInAt(), clockIn) && Objects.equals(before.getClockOutAt(), clockOut)) {
                 throw new InvalidRequestException("設定的時間與目前的紀錄相同，沒有需要更正的內容");
             }
+            rules.validate(body.employeeId(), body.workDate(), body.attendanceId(), clockIn, clockOut);
             // 最終仍以原子條件更新為準（id＋version＋未作廢），擋住「查詢之後、更新之前」的並行變動
             if (attendanceRepository.correctIfCurrent(body.attendanceId(), body.expectedVersion(), clockIn, clockOut, now) == 0) {
                 throw changed();
@@ -212,7 +223,7 @@ public class AttendanceAdminService {
 
         Attendance after = correctingExisting
                 ? attendanceRepository.findById(body.attendanceId()).orElseThrow()
-                : attendanceRepository.findByEmployeeIdAndWorkDateAndVoidedAtIsNull(body.employeeId(), body.workDate()).orElseThrow();
+                : attendanceRepository.findFirstByEmployeeIdAndWorkDateAndVoidedAtIsNullOrderByIdDesc(body.employeeId(), body.workDate()).orElseThrow();
         auditLog.record(new AuditEntry(AttendanceOperation.DIRECT_CORRECTION, body.employeeId(), body.workDate(), null, null,
                 after.getId(), body.expectedVersion(), reason,
                 before == null ? null : before.getClockInAt(), before == null ? null : before.getClockOutAt(),
@@ -225,6 +236,7 @@ public class AttendanceAdminService {
     public AttendanceRecordResponse voidToday(EmployeeUserDetails actor, DirectVoidRequest body) {
         requireAdmin(actor);
         requireNotSelf(actor, body.employeeId());
+        rules.lock(body.employeeId());
         requireEmployee(body.employeeId());
         Instant now = now();
         LocalDate today = BusinessTime.workDateOf(now);

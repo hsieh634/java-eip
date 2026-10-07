@@ -72,10 +72,10 @@ try {
     await click(a.page, '上班打卡')
     await waitStatus(a.page, '工作中')
     await click(a.page, '下班打卡')
-    await waitStatus(a.page, '今日已完成')
+    await waitStatus(a.page, '目前已下班，可再次上班')
     const originalIn = await a.page.$eval('[data-testid=clock-in-time]', (el) => el.textContent)
     const originalOut = await a.page.$eval('[data-testid=clock-out-time]', (el) => el.textContent)
-    check('E1 員工當日已完成上下班，兩顆按鈕皆停用（每日一組）', (await isDisabled(a.page, '上班打卡')) && (await isDisabled(a.page, '下班打卡')))
+    check('E1 員工當日已完成一組，可再次上班', !(await isDisabled(a.page, '上班打卡')) && (await isDisabled(a.page, '下班打卡')))
 
     // 已下班：兩種今日申請都可以選，名稱可以清楚分辨
     check('E1 已下班時同時提供「申請撤銷下班打卡」與「申請整組作廢並重新打卡」', (await hasButton(a.page, '申請撤銷下班打卡')) && (await hasButton(a.page, '申請整組作廢並重新打卡')))
@@ -85,7 +85,7 @@ try {
     const resetFormText = await a.page.$eval('[data-testid=reset-form]', (el) => el.textContent)
     check('E1 整組作廢表單列出員工、目前上下班，並明確說明「整組」都會作廢、要重新打上下班卡',
       resetFormText.includes('E2E 員工 A') && resetFormText.includes(originalIn) && resetFormText.includes(originalOut) &&
-      resetFormText.includes('整組打卡（上班與下班）都會標為作廢') && resetFormText.includes('重新打上班卡與下班卡') && resetFormText.includes('申請撤銷下班打卡'))
+      resetFormText.includes('這一組打卡（上班與下班）標為作廢') && resetFormText.includes('其他時段不變') && resetFormText.includes('申請撤銷下班打卡'))
     await click(a.page, '送出申請')
     await waitText(a.page, '請填寫原因')
     check('E1 申請原因空白 → 前端提示「請填寫原因」，沒有送出', (await a.page.$('[data-testid=today-pending]')) === null)
@@ -94,7 +94,7 @@ try {
     await a.page.waitForSelector('[data-testid=today-pending]')
     check('E1 送出後顯示「整組作廢並重新打卡」待審說明；今日仍是已完成、按鈕仍停用（申請不會立即改動出勤）',
       (await a.page.$eval('[data-testid=today-pending]', (el) => el.dataset.kind)) === 'RESET_TODAY' &&
-      (await todayStatus(a.page)) === '今日已完成' && (await isDisabled(a.page, '上班打卡')) &&
+      (await todayStatus(a.page)) === '目前已下班，可再次上班' && !(await isDisabled(a.page, '上班打卡')) &&
       !(await hasButton(a.page, '申請整組作廢並重新打卡')) && !(await hasButton(a.page, '申請撤銷下班打卡')))
     await a.page.waitForSelector('[data-testid=my-requests]') // 卡片送出後，「我的申請」是非同步重新載入的
     check('E1 「我的申請」顯示一筆待審核', (await a.page.$eval('[data-testid=my-requests]', (el) => el.textContent)).includes('待審核'))
@@ -126,8 +126,8 @@ try {
     await click(a.page, '上班打卡')
     await waitStatus(a.page, '工作中')
     await click(a.page, '下班打卡')
-    await waitStatus(a.page, '今日已完成')
-    check('E1 員工重新打卡成功並再次受每日一組限制', await isDisabled(a.page, '上班打卡'))
+    await waitStatus(a.page, '目前已下班，可再次上班')
+    check('E1 員工重新打卡完成後仍可再次上班', !(await isDisabled(a.page, '上班打卡')))
 
     // 原始紀錄與歷程
     await a.page.waitForSelector('[data-testid=records-table]')
@@ -281,7 +281,7 @@ try {
     await b.page.waitForSelector('[data-testid=records-table]')
     check('E4 只有上班（工作中）時：可申請整組作廢，但沒有「撤銷下班」', !(await hasButton(b.page, '申請撤銷下班打卡')) && (await hasButton(b.page, '申請整組作廢並重新打卡')))
     await click(b.page, '下班打卡') // 誤按
-    await waitStatus(b.page, '今日已完成')
+    await waitStatus(b.page, '目前已下班，可再次上班')
     const todayJson = () => b.page.evaluate(async () => (await fetch('/api/attendance/me/today')).json())
     const before = await todayJson()
     const shownIn = await b.page.$eval('[data-testid=clock-in-time]', (el) => el.textContent)
@@ -302,7 +302,7 @@ try {
     await click(b.page, '送出申請')
     await b.page.waitForSelector('[data-testid=today-pending]')
     check('E4 送出後待審說明為「撤銷下班打卡」；核准前仍是已完成',
-      (await b.page.$eval('[data-testid=today-pending]', (el) => el.dataset.kind)) === 'REVOKE_CLOCK_OUT' && (await todayStatus(b.page)) === '今日已完成')
+      (await b.page.$eval('[data-testid=today-pending]', (el) => el.dataset.kind)) === 'REVOKE_CLOCK_OUT' && (await todayStatus(b.page)) === '目前已下班，可再次上班')
 
     const admin = await adminLogin(ctxAdmin, DESKTOP)
     await admin.page.click('a[href="#/admin/attendance"]')
@@ -324,7 +324,7 @@ try {
     check('E4 紀錄列表沒有作廢紀錄、只有一筆（撤銷下班不是整組作廢）', bRows.length === 1 && !bRows.includes('VOIDED'), bRows.join(','))
     check('E4 恢復工作中後下班按鈕可再按', !(await isDisabled(b.page, '下班打卡')))
     await click(b.page, '下班打卡')
-    await waitStatus(b.page, '今日已完成')
+    await waitStatus(b.page, '目前已下班，可再次上班')
     await click(b.page, '查看歷程')
     await b.page.waitForSelector('[data-testid=history-list]')
     const bHistory = await b.page.$$eval('[data-testid=history-list] li', (lis) => lis.map((li) => ({ op: li.dataset.operation, kind: li.dataset.kind, text: li.textContent })))
@@ -357,7 +357,7 @@ try {
       await refocusUntil(b.page, () => document.querySelector('[data-testid=form-outdated]') !== null && document.querySelector('[data-testid=today-status]')?.textContent === '工作中'))
     await click(b.page, '取消')
     await click(b.page, '下班打卡')
-    await waitStatus(b.page, '今日已完成')
+    await waitStatus(b.page, '目前已下班，可再次上班')
     await assertNoUnhandled('E4', [b.tracker, admin.tracker])
     await ctxB.close()
     await ctxAdmin.close()
@@ -402,7 +402,7 @@ try {
     await click(a.page, '上班打卡')
     await waitStatus(a.page, '工作中')
     await click(a.page, '下班打卡')
-    await waitStatus(a.page, '今日已完成')
+    await waitStatus(a.page, '目前已下班，可再次上班')
     const replacement = await a.page.evaluate(async () => (await fetch('/api/attendance/me/today')).json())
     check('E5 新紀錄與舊紀錄 ID 不同、版本相同（只比版本會誤判）', String(replacement.recordId) !== oldRow.id && String(replacement.version) === oldRow.version,
       JSON.stringify({ oldRow, replacement }))

@@ -6,11 +6,12 @@ import { formatTime, submittedTime, taipeiToday, toTimeInputValue } from '../lib
 
 interface CorrectionFormProps {
   initialDate?: string
+  initialRecordId?: number
   onSubmitted: () => void
   onCancel: () => void
 }
 
-type Original = { kind: 'loading' } | { kind: 'ready'; record: AttendanceRecord | null } | { kind: 'error'; message: string }
+type Original = { kind: 'loading' } | { kind: 'ready'; record: AttendanceRecord | null; records: AttendanceRecord[] } | { kind: 'error'; message: string }
 
 /**
  * 申請補登／更正時間。
@@ -19,7 +20,7 @@ type Original = { kind: 'loading' } | { kind: 'ready'; record: AttendanceRecord 
  * 送出時附上查到的紀錄 ID＋版本（快照）；查詢之後資料被更正、作廢或替換，後端會拒絕，請重新選擇日期再提出。
  * 今日誤按下班建議用今日卡片的「申請撤銷下班打卡」。員工只是提出「希望值」，核准前不會改動正式出勤。
  */
-export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<CorrectionFormProps>) {
+export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCancel }: Readonly<CorrectionFormProps>) {
   const messageOf = useApiErrorMessage()
   const today = taipeiToday()
   const [workDate, setWorkDate] = useState(initialDate ?? today)
@@ -29,6 +30,7 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [selection, setSelection] = useState('choose')
 
   useEffect(() => {
     if (!workDate) return
@@ -36,8 +38,10 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
     fetchRecords({ from: workDate, to: workDate }).then(
       (list) => {
         if (!active) return
-        const record = list.records.find((r) => r.status !== 'VOIDED') ?? null
-        setOriginal({ kind: 'ready', record })
+        const records = list.records.filter(r => r.status !== 'VOIDED')
+        const record = records.find(r => r.id === initialRecordId) ?? (records.length === 1 ? records[0] : null)
+        setSelection(record ? String(record.id) : records.length ? 'choose' : 'new')
+        setOriginal({ kind: 'ready', record, records })
         setClockIn(toTimeInputValue(record?.clockInAt ?? null)) // 依該日目前的資料預填
         setClockOut(toTimeInputValue(record?.clockOutAt ?? null))
       },
@@ -46,7 +50,7 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
     return () => {
       active = false
     }
-  }, [workDate, messageOf])
+  }, [workDate, messageOf, initialRecordId])
 
   function changeDate(date: string) {
     setOriginal({ kind: 'loading' })
@@ -62,6 +66,7 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
     if (clockOut && clockOut < clockIn) return setError('下班時間不能早於上班時間。')
     if (!reason.trim()) return setError('請填寫原因。')
     if (original.kind !== 'ready') return setError('無法取得這一天目前的資料，請重新選擇日期後再試。')
+    if (selection === 'choose') return setError('請明確選擇要更正的時段，或選擇補登新時段。')
     setError(null)
     setSubmitting(true)
     const record = original.record
@@ -95,6 +100,18 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
   return (
     <form className="correction-form" onSubmit={handleSubmit} noValidate>
       <h3>申請更正／補登時間</h3>
+      {original.kind === 'ready' && <label>目標時段
+        <select id="corr-target" value={selection} onChange={e => {
+          const value = e.target.value
+          const record = original.records.find(r => String(r.id) === value) ?? null
+          setSelection(value); setOriginal({ ...original, record })
+          setClockIn(toTimeInputValue(record?.clockInAt ?? null)); setClockOut(toTimeInputValue(record?.clockOutAt ?? null))
+        }}>
+          <option value="choose" disabled>請選擇目標…</option>
+          <option value="new">補登缺少的新時段（不修改其他組）</option>
+          {original.records.map(r => <option key={r.id} value={r.id}>#{r.id} {formatTime(r.clockInAt)} ～ {formatTime(r.clockOutAt)}（版本 {r.version}）</option>)}
+        </select>
+      </label>}
       <div className="form-grid">
         <label htmlFor="corr-date">業務日期</label>
         <input id="corr-date" type="date" max={today} value={workDate} onChange={(e) => changeDate(e.target.value)} />
@@ -114,7 +131,7 @@ export function CorrectionForm({ initialDate, onSubmitted, onCancel }: Readonly<
           {clockIn || '—'} ～ {clockOut || '—（無下班時間）'}
         </dd>
       </dl>
-      <p className="muted small">時間以台北時區輸入。本版本僅支援同一天的白班，不支援未來時間；核准前正式出勤不會改變。</p>
+      <p className="muted small">時間以台北時區輸入。同日可有多組但不得重疊，每天最多一筆待審更正；不支援跨日與未來時間，核准前正式出勤不會改變。</p>
 
       <label htmlFor="corr-reason">原因（必填）</label>
       <textarea id="corr-reason" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="例如：忘記打卡，實際 09:00 到班" />

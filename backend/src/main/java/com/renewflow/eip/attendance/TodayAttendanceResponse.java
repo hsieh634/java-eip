@@ -21,5 +21,7 @@ public record TodayAttendanceResponse(
         LocalDate unfinishedBefore,
         Long recordId,
         Long version,
-        LocationPolicyResponse locationPolicy) {
+        LocationPolicyResponse locationPolicy,
+        java.util.List<AttendanceRecordResponse> records,
+        long completedSeconds) {
 }
