@@ -6,7 +6,7 @@
 
 接手時 HEAD、origin/main 與實際遠端 main 均為 `af596813c4a8c1d89afcedce1d14cc0ee0db5508`。工作區乾淨，無暫存、未暫存或未追蹤成果；搜尋未發現 repo AGENTS.md／CLAUDE.md、t03-3 或舊交接。已閱讀 README、工程方法、roadmap、產品方向、T03.1／T03.2／T04 規格及相關程式；本輪依使用者提供的 AGENTS 指示與附件執行。
 
-完成實作 commit：`IMPLEMENTATION_SHA_PENDING`。其後只有補實作 SHA 的交接／版本紀錄 commit；目前完整交付 SHA 請執行 `git rev-parse HEAD`，遠端用 `git ls-remote origin refs/heads/main` 核對。commit 不寫入自身無法預先得知的 SHA；工具最終回報提供完整交付 SHA。
+完成實作 commit：`db5125b9785471aab9ccced0d2eebd2c8fa87f6e`。其後只有補實作 SHA 的交接／版本紀錄 commit；目前完整交付 SHA 請執行 `git rev-parse HEAD`，遠端用 `git ls-remote origin refs/heads/main` 核對。commit 不寫入自身無法預先得知的 SHA；工具最終回報提供完整交付 SHA。
 
 所有修改來自本輪 Codex，沒有覆蓋 Claude 或使用者未提交成果。修改檔案完整列表見 [changed-files](t03-3/changed-files.md)，目前未提交成果以 `git status --short` 為準，勿只依文件推測。
 

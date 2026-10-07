@@ -202,7 +202,7 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 
 ## 第 14 輪：T03.3 多組打卡與 BUG-TP-001
 
-- 基準：`af596813c4a8c1d89afcedce1d14cc0ee0db5508`；完成實作 SHA：`IMPLEMENTATION_SHA_PENDING`（其後僅補交接版本）。
+- 基準：`af596813c4a8c1d89afcedce1d14cc0ee0db5508`；完成實作 SHA：`db5125b9785471aab9ccced0d2eebd2c8fa87f6e`（其後僅補交接版本）。
 - 接手時 main／工作區乾淨，沒有 Claude 未提交成果。本輪 Codex 完成需求至 Archive 文件與實作。
 - 多組出勤、穩定 requestId、持久化原成功回應、精確下班 ID＋版本、共同鎖與交易、多組更正／補登／作廢相容；V8 保留既有資料，V1～V7 不改。
 - 工時 BUG-TP-001：原版 11／17 → 同批修補後 17／17；追加上層表單鎖保護後最終 21／21。成功回應執行期檢查，未知提交保留原本文，重試被拒不清快照。
