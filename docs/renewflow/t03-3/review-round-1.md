@@ -62,7 +62,7 @@
 
 ## 本輪實際證據
 
-修正完成實作 SHA：`R1_IMPLEMENTATION_SHA_PENDING`；其後僅補交接 SHA 的文件提交。R1 表單 blob：`203131fcf58224a6891297d5567fa9c61b548a60`。基準表單 blob `f95ce7c041f9380847a8453d9e90957d3d7d42a5` 與修正前工作區 hash 相同；先在原程式完整跑腳本才修改表單，沒有 reset／checkout 還原。腳本修正前後 SHA-256 均為 `bac87542b30483ceaf5c5f0c51a2e00570ef81b27d6b38c4bfa7b24c8f2b2ffa`。
+修正完成實作 SHA：`eb5d6840ca5793e06dfc4e2782fdba20bd4757c4`；其後僅補交接 SHA 的文件提交。R1 表單 blob：`203131fcf58224a6891297d5567fa9c61b548a60`。基準表單 blob `f95ce7c041f9380847a8453d9e90957d3d7d42a5` 與修正前工作區 hash 相同；先在原程式完整跑腳本才修改表單，沒有 reset／checkout 還原。腳本修正前後 SHA-256 均為 `bac87542b30483ceaf5c5f0c51a2e00570ef81b27d6b38c4bfa7b24c8f2b2ffa`。
 
 | 執行版本／命令（工作目錄 frontend） | 實際結果 | log |
 |---|---|---|

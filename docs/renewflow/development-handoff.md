@@ -4,7 +4,7 @@
 
 ## 最新接續：T03.3 第 1 輪 R1
 
-本輪基準 HEAD／origin/main／遠端 main 查證皆 `d3d2d52761f9cb8e958828022d6b2f67d633ef5f`，工作區乾淨，原目標失效 fallback 尚未修正；依使用者 AGENTS 指示及 R1 附件執行。修正實作 commit：`R1_IMPLEMENTATION_SHA_PENDING`；其後只補交接 SHA。完整交付 HEAD 用 git rev-parse HEAD，遠端用 git ls-remote origin refs/heads/main 核對，最終回報提供實際 SHA。
+本輪基準 HEAD／origin/main／遠端 main 查證皆 `d3d2d52761f9cb8e958828022d6b2f67d633ef5f`，工作區乾淨，原目標失效 fallback 尚未修正；依使用者 AGENTS 指示及 R1 附件執行。修正實作 commit：`eb5d6840ca5793e06dfc4e2782fdba20bd4757c4`；其後只補交接 SHA。完整交付 HEAD 用 git rev-parse HEAD，遠端用 git ls-remote origin refs/heads/main 核對，最終回報提供實際 SHA。
 
 已完成 CorrectionForm 局部目標 union、失效待選／原 ID 提示、明選目標或補登、日期切換清空與過期回應保護。通用入口及微秒保留正常。沒有改 AttendancePage（原本傳 ID 正確）、後端、API、migration、共用 HTTP／認證／元件或相依套件。
 

@@ -216,7 +216,7 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 
 ## 第 15 輪：T03.3 第 1 輪複審 R1
 
-- 基準：`d3d2d52761f9cb8e958828022d6b2f67d633ef5f`；修正實作 SHA：`R1_IMPLEMENTATION_SHA_PENDING`（其後僅補交接版本）。
+- 基準：`d3d2d52761f9cb8e958828022d6b2f67d633ef5f`；修正實作 SHA：`eb5d6840ca5793e06dfc4e2782fdba20bd4757c4`（其後僅補交接版本）。
 - CorrectionForm 指定 ID 查不到時保持待選，顯示原 ID，不改另一組或補登；使用者明選後才提交。日期切換清空原快照與時間，指定入口重新待選，通用入口正常預設保留。
 - 本輪原版／修補使用同支 R1 腳本：21／29 → 29／29；build／lint、多組 17／17、更正審核 74／74、基本出勤 37／37 通過。真 POST 與 renewflow_test 資料比較；受控舊清單／延遲 GET 不代表真人或真網路故障。
 - 未改後端、API／DTO、migration、共用元件／HTTP／認證或相依套件。前批後端與 migration 證據沿用；本輪不重跑後端全套。未重啟開發服務、未升級開發 V7，未替真使用者操作。
