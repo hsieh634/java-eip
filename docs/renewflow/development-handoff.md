@@ -2,6 +2,28 @@
 
 更新：2026-10-07，Codex。目錄 `C:\Users\10739\java-eip`，repository `hsieh634/java-eip`，分支 `main`。
 
+## 最新接續：T03.3 第 1 輪 R1
+
+本輪基準 HEAD／origin/main／遠端 main 查證皆 `d3d2d52761f9cb8e958828022d6b2f67d633ef5f`，工作區乾淨，原目標失效 fallback 尚未修正；依使用者 AGENTS 指示及 R1 附件執行。修正實作 commit：`R1_IMPLEMENTATION_SHA_PENDING`；其後只補交接 SHA。完整交付 HEAD 用 git rev-parse HEAD，遠端用 git ls-remote origin refs/heads/main 核對，最終回報提供實際 SHA。
+
+已完成 CorrectionForm 局部目標 union、失效待選／原 ID 提示、明選目標或補登、日期切換清空與過期回應保護。通用入口及微秒保留正常。沒有改 AttendancePage（原本傳 ID 正確）、後端、API、migration、共用 HTTP／認證／元件或相依套件。
+
+| 工作 | 本輪狀態 | 接續 |
+|---|---|---|
+| R1 修正與逐案測試 | 完成：同支腳本基準 21／29 → 修補 29／29 | ChatGPT 複審 |
+| build／lint 與既有回歸 | 完成：多組 17、更正審核 74、基本出勤 37，全部通過 | 不需重跑未影響模組 |
+| 規格、教材、作者 Review／Archive | 完成，[review-round-1](t03-3/review-round-1.md) 記錄完整證據 | 真人驗收尚未完成 |
+| 一般 commit／push main | 按本輪附件授權，最終 Git 紀錄核對 | 不 force push、不部署 |
+| T03.3／T05.1 | T03.3 等待複審，未結案；T05.1 尚未開始 | 停在本輪交付點 |
+
+本輪 log：frontend/e2e/output/t03-3-r1-before.log、after.log、build.log、lint.log、multiple-attendance.log、corrections.log、attendance.log（相同 t03-3-r1- 前綴）；受控畫面 r1-target-invalid.png 已檢視。R1 用真表單、POST、隔離 PostgreSQL；過期清單／延遲 GET 為受控，不能當真人驗收。先核對 actual catalog guard，唯讀資料比較只限本輪新員工。腳本完整原版／修補的 SHA-256 相同，細節見複審文件。
+
+前批後端 322／30、migration 14 表與其他模組 E2E 本輪沿用。沒有重跑後端全套，沒有新 migration、沒有套 V8 至開發庫，沒有操作 Max／STMAX 或改定位／示範組織。原 8080 PID 41304 保留、5173 未啟動、既有 renewflow-db healthy，開發庫仍 V7；隔離 8081／5174 按腳本 finally 停止本次 PID，專用申請撤回，測試資料與歷程保留供追溯。不清開發庫、不 down -v。
+
+真人驗收前必須由使用者依 README 備份／重啟新版後端套 V8，再啟動新版前端；目前舊 8080／V7 尚不能當新版驗收。操作：兩組中保留過期列表、另由管理員作廢第一組，從舊列打開更正，應維持待選與原 ID 提示；明選第二組或新補登後才送出；切日期也需重新明選。教材：[T03.3 R1](../learning/T03-3-target-selection-review-fix.md)。下一步只做 ChatGPT 複審／必要回饋，不自行進入 T05.1。
+
+## 前批實作交接（保留歷史，以下「本輪」指前批）
+
 ## 基準與完成版本
 
 接手時 HEAD、origin/main 與實際遠端 main 均為 `af596813c4a8c1d89afcedce1d14cc0ee0db5508`。工作區乾淨，無暫存、未暫存或未追蹤成果；搜尋未發現 repo AGENTS.md／CLAUDE.md、t03-3 或舊交接。已閱讀 README、工程方法、roadmap、產品方向、T03.1／T03.2／T04 規格及相關程式；本輪依使用者提供的 AGENTS 指示與附件執行。

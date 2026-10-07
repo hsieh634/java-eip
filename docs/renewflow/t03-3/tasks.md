@@ -1,5 +1,17 @@
 # T03.3 Tasks
 
+## 第 1 輪複審 R1
+
+- [x] 接手盤點與 [R1 需求／設計／規格](review-round-1.md)。
+- [x] 基準失敗與修補後同套回歸證據。
+- [x] 指定目標失效保持待選；明選目標／補登；日期切換保留意圖。
+- [x] build／lint、R1／多組／更正審核／基本出勤 E2E。
+- [x] 教材、驗證、交接、作者 Review／Archive、一般 commit／push。
+
+本輪同支 R1：21／29 → 29／29；build／lint 與三支既有 E2E 通過。一般 commit／push 與遠端核對由最終 Git 紀錄確認。等待 ChatGPT 複審；T03.3 未結案，T05.1 尚未開始。
+
+## 前批實作（沿用證據）
+
 - [x] 接手盤點、需求／領域分析。
 - [x] 架構／資料／API／安全、Proposal／Design／Specification。
 - [x] BUG-TP-001 舊版失敗回歸及修補。

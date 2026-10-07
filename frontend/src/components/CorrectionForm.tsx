@@ -11,7 +11,8 @@ interface CorrectionFormProps {
   onCancel: () => void
 }
 
-type Original = { kind: 'loading' } | { kind: 'ready'; record: AttendanceRecord | null; records: AttendanceRecord[] } | { kind: 'error'; message: string }
+type Target = { kind: 'choose'; invalidId?: number } | { kind: 'new' } | { kind: 'record'; record: AttendanceRecord }
+type Original = { kind: 'loading' } | { kind: 'ready'; target: Target; records: AttendanceRecord[] } | { kind: 'error'; message: string }
 
 /**
  * 申請補登／更正時間。
@@ -30,7 +31,7 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [selection, setSelection] = useState('choose')
+  const [dateChanged, setDateChanged] = useState(false)
 
   useEffect(() => {
     if (!workDate) return
@@ -39,9 +40,15 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
       (list) => {
         if (!active) return
         const records = list.records.filter(r => r.status !== 'VOIDED')
-        const record = records.find(r => r.id === initialRecordId) ?? (records.length === 1 ? records[0] : null)
-        setSelection(record ? String(record.id) : records.length ? 'choose' : 'new')
-        setOriginal({ kind: 'ready', record, records })
+        // 指定入口不能因為查不到而換目標；換過日期後也必須由使用者明選。
+        const record = initialRecordId !== undefined
+          ? (!dateChanged ? records.find(r => r.id === initialRecordId) : null)
+          : (records.length === 1 ? records[0] : null)
+        const target: Target = record ? { kind: 'record', record }
+          : initialRecordId !== undefined
+            ? { kind: 'choose', invalidId: dateChanged ? undefined : initialRecordId }
+            : records.length ? { kind: 'choose' } : { kind: 'new' }
+        setOriginal({ kind: 'ready', target, records })
         setClockIn(toTimeInputValue(record?.clockInAt ?? null)) // 依該日目前的資料預填
         setClockOut(toTimeInputValue(record?.clockOutAt ?? null))
       },
@@ -50,26 +57,31 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
     return () => {
       active = false
     }
-  }, [workDate, messageOf, initialRecordId])
+  }, [workDate, messageOf, initialRecordId, dateChanged])
 
   function changeDate(date: string) {
+    if (date === workDate || submitting) return
     setOriginal({ kind: 'loading' })
+    setClockIn('')
+    setClockOut('')
+    setError(null)
+    setDateChanged(true)
     setWorkDate(date)
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (submitting || original.kind === 'loading') return
+    if (original.kind !== 'ready') return setError('無法取得這一天目前的資料，請重新選擇日期後再試。')
+    if (original.target.kind === 'choose') return setError('請明確選擇要更正的時段，或選擇補登新時段。')
     // 前端先擋常見錯誤；後端仍會完整驗證（含「不得是未來的時間」）
     if (!workDate || workDate > today) return setError('請選擇今天或以前的日期。')
     if (!clockIn) return setError('請填寫上班時間。')
     if (clockOut && clockOut < clockIn) return setError('下班時間不能早於上班時間。')
     if (!reason.trim()) return setError('請填寫原因。')
-    if (original.kind !== 'ready') return setError('無法取得這一天目前的資料，請重新選擇日期後再試。')
-    if (selection === 'choose') return setError('請明確選擇要更正的時段，或選擇補登新時段。')
     setError(null)
     setSubmitting(true)
-    const record = original.record
+    const record = original.target.kind === 'record' ? original.target.record : null
     try {
       await submitRequest({
         type: 'CORRECT_TIME',
@@ -78,7 +90,7 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
         clockInTime: submittedTime(clockIn, record?.clockInAt ?? null),
         clockOutTime: clockOut ? submittedTime(clockOut, record?.clockOutAt ?? null) : null,
         reason: reason.trim(),
-        // 快照：表單看到的那一筆（或「沒有紀錄」）。資料在這之後變動 → 後端 409 RECORD_CHANGED
+        // 快照：明選的紀錄；新補登不帶目標。資料在這之後變動 → 後端 409 RECORD_CHANGED
         expectedAttendanceId: record?.id ?? null,
         expectedVersion: record?.version ?? null,
       })
@@ -92,19 +104,28 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
   let originalText = '載入目前資料中…'
   if (original.kind === 'error') originalText = `無法取得目前資料：${original.message}`
   if (original.kind === 'ready') {
-    originalText = original.record
-      ? `${formatTime(original.record.clockInAt)} ～ ${formatTime(original.record.clockOutAt)}`
-      : '（這一天沒有出勤紀錄）'
+    const target = original.target
+    originalText = target.kind === 'record'
+      ? `${formatTime(target.record.clockInAt)} ～ ${formatTime(target.record.clockOutAt)}`
+      : target.kind === 'choose'
+        ? target.invalidId !== undefined
+          ? `原選擇的時段 #${target.invalidId} 已失效，請重新選擇要更正的時段或補登。`
+          : '（請選擇要更正的時段，或明確選擇補登缺少的新時段）'
+        : original.records.length
+          ? `（補登缺少的新時段；這一天另有 ${original.records.length} 組有效出勤，不修改其他組）`
+          : '（這一天沒有出勤紀錄；補登缺少的新時段）'
   }
 
   return (
     <form className="correction-form" onSubmit={handleSubmit} noValidate>
       <h3>申請更正／補登時間</h3>
       {original.kind === 'ready' && <label>目標時段
-        <select id="corr-target" value={selection} onChange={e => {
+        <select id="corr-target" disabled={submitting} value={original.target.kind === 'record' ? String(original.target.record.id) : original.target.kind} onChange={e => {
+          if (submitting) return
           const value = e.target.value
           const record = original.records.find(r => String(r.id) === value) ?? null
-          setSelection(value); setOriginal({ ...original, record })
+          const target: Target = record ? { kind: 'record', record } : value === 'new' ? { kind: 'new' } : { kind: 'choose' }
+          setOriginal({ ...original, target }); setError(null)
           setClockIn(toTimeInputValue(record?.clockInAt ?? null)); setClockOut(toTimeInputValue(record?.clockOutAt ?? null))
         }}>
           <option value="choose" disabled>請選擇目標…</option>
@@ -114,7 +135,7 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
       </label>}
       <div className="form-grid">
         <label htmlFor="corr-date">業務日期</label>
-        <input id="corr-date" type="date" max={today} value={workDate} onChange={(e) => changeDate(e.target.value)} />
+        <input id="corr-date" type="date" max={today} value={workDate} disabled={submitting} onChange={(e) => changeDate(e.target.value)} />
         <label htmlFor="corr-in">上班時間</label>
         <input id="corr-in" type="time" step={1} value={clockIn} onChange={(e) => setClockIn(e.target.value)} />
         <label htmlFor="corr-out">下班時間（可留空）</label>
@@ -139,7 +160,7 @@ export function CorrectionForm({ initialDate, initialRecordId, onSubmitted, onCa
         {error}
       </p>
       <div className="actions">
-        <button type="submit" className="btn btn--primary" disabled={submitting || original.kind === 'loading'}>
+        <button type="submit" className="btn btn--primary" disabled={submitting || original.kind !== 'ready' || original.target.kind === 'choose'}>
           {submitting ? '送出中…' : '送出申請'}
         </button>
         <button type="button" className="btn" onClick={onCancel} disabled={submitting}>

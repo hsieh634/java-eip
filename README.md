@@ -10,7 +10,7 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | 規格（需求、架構、資料、API、安全、本階段 proposal／design／specification／tasks） | [docs/renewflow/](docs/renewflow/) |
 | T03 打卡規格 | [docs/renewflow/t03/](docs/renewflow/t03/) |
 | T03.1 更正／重新打卡／管理權限規格 | [docs/renewflow/t03-1/](docs/renewflow/t03-1/)（第 1 輪複審：[review-round-1.md](docs/renewflow/t03-1/review-round-1.md)） |
-| T03.3 同日多組出勤、去重與工時未知結果修補 | [docs/renewflow/t03-3/](docs/renewflow/t03-3/)、[本輪教材](docs/learning/T03-3-multiple-attendance-and-submit-results.md) |
+| T03.3 同日多組出勤、去重與工時未知結果修補 | [docs/renewflow/t03-3/](docs/renewflow/t03-3/)、[主教材](docs/learning/T03-3-multiple-attendance-and-submit-results.md)、[第 1 輪 R1](docs/renewflow/t03-3/review-round-1.md)、[目標選擇教材](docs/learning/T03-3-target-selection-review-fix.md) |
 | T03.2 定位打卡規格 | [docs/renewflow/t03-2/](docs/renewflow/t03-2/) |
 | T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（複審：[第 1 輪](docs/renewflow/t04/review-round-1.md)、[第 2 輪](docs/renewflow/t04/review-round-2.md)） |
 | T05 前置：組織與員工規格 | [docs/renewflow/t05-foundation/](docs/renewflow/t05-foundation/) |

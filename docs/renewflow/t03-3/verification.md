@@ -2,6 +2,14 @@
 
 日期：2026-10-07。執行者：Codex。基準 `af596813c4a8c1d89afcedce1d14cc0ee0db5508`；完成實作 commit 見 [交接](../development-handoff.md)，其後僅補交接 SHA。以下為本輪作者證據，尚未經 ChatGPT 複審。
 
+## 最新：T03.3 第 1 輪 R1（本輪新證據）
+
+比較基準 `d3d2d52761f9cb8e958828022d6b2f67d633ef5f`。同一 R1 腳本基準 21／29（八項缺陷失敗）→ 修補 29／29；build／lint、多組 17／17、更正審核 74／74、基本出勤 37／37 通過，exit 0。逐案前置／步驟／副作用／版本／log 與作者 Review／Archive 見 [review-round-1](review-round-1.md)。受控舊清單及延遲 GET，真表單提交與隔離 DB 比較；真人驗收尚未執行。本輪未改後端、API、migration、共用元件或套件，沒有重跑後端全套。
+
+## 前批實作證據（本輪沿用）
+
+以下為前批 af5968 → db5125b 的作者執行紀錄，不改稱本輪重新執行。前批後端 322／30、migration 14 表及其他模組 E2E 沿用；本輪四支 E2E 的新紀錄以上節為準。
+
 ## 環境與執行方式
 
 後端採既有 Maven wrapper、Spring Boot、PostgreSQL；前端採既有 Node、Puppeteer、build／lint。沒有新增相依套件、工具、映像檔或服務。隔離資料庫為 `renewflow_test`；`TestDatabaseGuard` 讀實際 catalog 並比對 allowlist，JUnit 與 E2E 依序執行，避免互相清除資料。E2E 自行啟動 8081／5174 堆疊，使用腳本專用員工及專案，結束後只清理自己建立的 PID；不操作真實使用者或開發庫資料。

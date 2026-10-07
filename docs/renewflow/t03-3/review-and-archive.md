@@ -11,3 +11,8 @@
 待辦只有 ChatGPT 複審與另外授權的後續階段。效能／鎖等待負載未驗證，跨重新整理的快照不持久化；重新進頁必須查真實狀態。開發服務尚未重啟，新功能尚未載入開發服務，開發庫仍 V7。升級時先依既有方式保留備份，再由使用者重啟後端套 V8；禁止以 clean／repair 解決問題。
 
 Archive 保留原 log 在 backend/target 與 frontend/e2e/output（被 Git 忽略、不提交 Session／CSRF／測試執行日誌）；提交規格、證據摘要及合成資料的逐表雜湊。完整變更檔案清單見 changed-files.md，完成版本見 development-handoff.md。
+
+
+## 第 1 輪 R1 追加
+
+基準 d3d2d52761f9cb8e958828022d6b2f67d633ef5f，前端指定目標失效 fallback 修正已完成作者自測；新規格、原版失敗／修補通過、逐案資料比較、讀截圖與限制統一保存於 [review-round-1](review-round-1.md)。本文件以上為前批歷史證據。本輪後端／API／migration／共用元件／套件未改，開發庫仍 V7、開發服務未動。等待 ChatGPT 複審；T03.3 不結案，T05.1 尚未開始。
