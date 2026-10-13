@@ -41,6 +41,6 @@ DocumentResponse與RevisionInfo增加viewMode（FULL／REVIEW_HISTORY），throu
 - [x] 後端全套、build／lint、指定回歸。
 - [x] 開發備份、正常重啟、展示載入／重跑與既有資料比對。
 - [x] 客戶Demo文件、學習與交接。
-- [ ] 最後敏感檢查與一般commit／push（以交接SHA為準）。
+- [x] 最後敏感／差異檢查與一般commit／push：實作233e6bb7184569d7a69e305c3b48856a045c7257已推main；後續僅補交接文件。
 
 真人／客戶Demo待Max執行；可設定簽核流程及拖拉設計器未實作。實際結果、來源版本與限制見[verification](review-round-1-verification.md)，客戶操作見[指南](../demo-stmax-customer.md)。

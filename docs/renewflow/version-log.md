@@ -10,7 +10,7 @@ R1將審核入口（含ADMIN）限制為所選提交及必要前序，版本、�
 
 作者R1真核心舊3失敗／4→修正4／4；R2函式0／5→5／5；後端349／349、五支E2E252、build／lint通過。V9備份／還原16表相同，載入原列相同、兩次重跑及唯讀展示後全表相同；本機新版已啟用，測試資源已清除。見[規格](t05-1/review-round-1.md)、[驗證](t05-1/review-round-1-verification.md)、[客戶指南](demo-stmax-customer.md)、[教材](../learning/T05-1-review-scope-and-customer-demo.md)。
 
-狀態：作者自測完成，等待ChatGPT複審；真人與客戶Demo待Max；T05.1未結案，不進下一階段。最終SHA見交接／交付報告。
+狀態：作者自測完成，等待ChatGPT複審；真人與客戶Demo待Max；T05.1未結案，不進下一階段。實作SHA `233e6bb7184569d7a69e305c3b48856a045c7257`已推送main；後續只補交接文件，完整交付SHA見最終回報／Git。
 
 ## 第 1 輪：T01＋T02
 

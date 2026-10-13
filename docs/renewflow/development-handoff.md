@@ -2,7 +2,7 @@
 
 ## 2026-10-13 最新：T05.1 第1輪 R1／R2＋STMAX 客戶 Demo v1
 
-接手基準`47f7fdfec33513bde50396e2864575f4c3f6e054`，初始main／origin／遠端一致、工作區乾淨。使用者帶回ChatGPT34項受控前端通過及R1／R2問題；本輪作者修正完成，**等待ChatGPT複審，真人與客戶Demo待Max；T05.1未結案**。完整交付SHA見最終回報／Git，不自我引用未產生commit。
+接手基準`47f7fdfec33513bde50396e2864575f4c3f6e054`，初始main／origin／遠端一致、工作區乾淨。使用者帶回ChatGPT34項受控前端通過及R1／R2問題；本輪作者修正完成，**等待ChatGPT複審，真人與客戶Demo待Max；T05.1未結案**。實作與作者驗證版本`233e6bb7184569d7a69e305c3b48856a045c7257`已一般推送main；其後僅補本交接SHA／完成標記，完整交付HEAD見最終回報／Git。
 
 R1審核入口包含ADMIN只看所選及必要前序，document／revision／history／快照／出勤同範圍，介面明示歷史基礎；本人／ADMIN管理完整。R2撤回列ID、操作、時段、結案及原有效保留，未改交易。無新migration，V1～V9不改；無套件／映像／常駐服務或共用HTTP／認證／useLoad修改。
 
