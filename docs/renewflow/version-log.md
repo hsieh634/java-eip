@@ -234,3 +234,5 @@ Spring Boot 4.1.1 系統需求（支援 Java 17–26、Maven 3.6.3+、Spring Fra
 - 詳細需求、API、安全、逐案證據、限制、Review／Archive及教材在[t05-1/](t05-1/)。真人M33／M51全部未執行；舊138案不宣稱人工完成。
 - 一般commit／push main依附件授權；敏感／無關產物檢查後提交，不force push、不部署。無新相依、工具或費用。
 - 狀態：T05.1 作者自測完成，等待 ChatGPT 複審；真人驗收依實際結果記錄。可設定簽核流程與拖拉設計器尚未實作。
+
+T05.1實作commit：`1ea6c625894d4645e07e5cafd70ee454d6956eb3`，已一般push main並核對遠端一致；後續只有交接SHA與Tasks更新。完整交付SHA以最終Git紀錄為準。

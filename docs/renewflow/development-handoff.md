@@ -6,6 +6,8 @@
 
 基準HEAD／origin/main／遠端main均72ba3265037a7cd09c49f3f018b0ee408170f87e，接手時工作區乾淨；前輪R1實作eb5d6840ca5793e06dfc4e2782fdba20bd4757c4不重做。本輪使用者新附件已授權規格、實作、測試、資料庫備份／升級、本機服務啟停與一般commit／push main。沒有force push或部署。
 
+本輪實作commit：`1ea6c625894d4645e07e5cafd70ee454d6956eb3`，一般push後已與遠端main核對一致；其後只補本段SHA與交付勾選，沒有改程式。完整交付HEAD以`git rev-parse HEAD`及`git ls-remote origin refs/heads/main`核對，最終回報提供實際值。
+
 T03.3 R1收到使用者提供的ChatGPT程式複審通過；實際表單邏輯受控20項基準11／20→修正20／20，BUG-TP-001前輪通過。不是ChatGPT重跑完整後端／E2E；前輪作者29項是另一份證據。真人仍未完成。
 
 | 工作 | 本輪實際狀態 | 下一步 |
