@@ -57,6 +57,10 @@ public class LeaveHistory {
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
 
+    @Column(name="decision_snapshot", columnDefinition="text") private String decisionSnapshot;
+
+    public String getDecisionSnapshot() { return decisionSnapshot; }
+
     protected LeaveHistory() {
     }
 
@@ -73,6 +77,14 @@ public class LeaveHistory {
         this.actorId = actorId;
         this.occurredAt = occurredAt;
     }
+
+    LeaveHistory(Long leaveRequestId, HistoryAction action, LeaveStatus fromStatus, LeaveStatus toStatus,
+                 String reason, Long actorId, Instant now, String snapshot) {
+        this(leaveRequestId,null,action,fromStatus,toStatus,null,null,reason,actorId,now);
+        this.decisionSnapshot=snapshot;
+    }
+
+    public Long getLeaveRequestId() { return leaveRequestId; }
 
     public Long getId() {
         return id;

@@ -79,6 +79,27 @@ public class LeaveRequest {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name="document_id") private Long documentId;
+    @Column(name="revision_no") private int revisionNo;
+    @Enumerated(EnumType.STRING) @Column(name="operation") private LeaveEnums.Operation operation;
+    @Column(name="source_request_id") private Long sourceRequestId;
+    @Column(name="source_version") private Long sourceVersion;
+    @Column(name="base_effective_request_id") private Long baseEffectiveRequestId;
+    @Column(name="base_effective_version") private long baseEffectiveVersion;
+    @Column(name="fingerprint") private String fingerprint;
+    @Column(name="submitted_approver_id") private Long submittedApproverId;
+    @Column(name="submitted_approver_source") private String submittedApproverSource;
+    public Long getDocumentId() { return documentId; }
+    public int getRevisionNo() { return revisionNo; }
+    public LeaveEnums.Operation getOperation() { return operation; }
+    public Long getSourceRequestId() { return sourceRequestId; }
+    public Long getSourceVersion() { return sourceVersion; }
+    public Long getBaseEffectiveRequestId() { return baseEffectiveRequestId; }
+    public long getBaseEffectiveVersion() { return baseEffectiveVersion; }
+    public String getFingerprint() { return fingerprint; }
+    public Long getSubmittedApproverId() { return submittedApproverId; }
+    public String getSubmittedApproverSource() { return submittedApproverSource; }
+
     protected LeaveRequest() {
     }
 

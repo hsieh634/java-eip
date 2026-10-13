@@ -46,10 +46,11 @@ public class LeaveAdminService {
     private final LeaveViews views;
     private final OrganizationLock lock;
     private final Clock clock;
+    private final LeaveRevisionService revisions;
 
     LeaveAdminService(LeaveRequestRepository requestRepository, LeaveApproverSettingRepository settingRepository,
                       LeaveHistoryRepository historyRepository, EmployeeRepository employeeRepository, ApproverResolver approverResolver,
-                      LeaveAuditLog auditLog, LeaveViews views, OrganizationLock lock, Clock clock) {
+                      LeaveAuditLog auditLog, LeaveViews views, OrganizationLock lock, Clock clock,LeaveRevisionService revisions) {
         this.requestRepository = requestRepository;
         this.settingRepository = settingRepository;
         this.historyRepository = historyRepository;
@@ -58,7 +59,7 @@ public class LeaveAdminService {
         this.auditLog = auditLog;
         this.views = views;
         this.lock = lock;
-        this.clock = clock;
+        this.clock = clock; this.revisions=revisions;
     }
 
     // ================================================================ 申請
@@ -98,6 +99,7 @@ public class LeaveAdminService {
         if (Objects.equals(body.approverId(), r.getApproverId())) {
             throw noChange("新的審核人與目前相同");
         }
+        revisions.validateBase(r);
         Employee target = requireValidApprover(body.approverId());
         Instant now = now();
         if (requestRepository.reassignIfPending(id, body.expectedVersion(), target.getId(), now) == 0) {

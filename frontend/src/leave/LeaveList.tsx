@@ -3,7 +3,7 @@ import type { LeavePage, LeaveRequest, ListQuery, StatusFilter } from '../api/le
 import { formatMinutes } from '../lib/hours'
 import { formatWorkDate } from '../lib/time'
 import { useLoad } from '../lib/useLoad'
-import { LEAVE_STATUS_CHIP, LEAVE_STATUS_LABEL, LEAVE_TYPE_LABEL } from './labels'
+import { LEAVE_STATUS_CHIP, LEAVE_STATUS_LABEL, LEAVE_TYPE_LABEL, REVISION_LABEL } from './labels'
 
 interface LeaveListProps {
   /** 載入函式；key 用來區分不同清單（本人／審核／管理） */
@@ -19,10 +19,11 @@ interface LeaveListProps {
   /** 篩選列額外的欄位（例如管理端的員工篩選） */
   extraFilters?: ReactNode
   extraKey?: string
+  openDisabled?: boolean
 }
 
 /** 請假清單：狀態、日期範圍（同時填或都不填，最多 366 天）、分頁；載入中、錯誤＋重試、空狀態。 */
-export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, showApplicant = false, emptyText, onOpen, testId, extraFilters, extraKey = '' }: Readonly<LeaveListProps>) {
+export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, showApplicant = false, emptyText, onOpen, testId, extraFilters, extraKey = '', openDisabled = false }: Readonly<LeaveListProps>) {
   const [draft, setDraft] = useState({ status: initialStatus, from: '', to: '' })
   const [query, setQuery] = useState<ListQuery>({ status: initialStatus, from: '', to: '', page: 0 })
   const [formError, setFormError] = useState<string | null>(null)
@@ -91,6 +92,9 @@ export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, sh
       )}
       {ready && ready.items.length > 0 && (
         <>
+          {ready.effectiveTotalMinutes !== undefined && <p className="muted" data-testid="leave-effective-total">
+            本頁目前有效時段合計：{formatMinutes(ready.effectiveTotalMinutes)}（歷史核准及待審內容不重複計算）
+          </p>}
           <table className="records-table" data-testid={`${testId}-table`}>
             <thead>
               <tr>
@@ -116,13 +120,17 @@ export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, sh
                   <td data-label="時段長度">{formatMinutes(r.minutes)}</td>
                   <td data-label="狀態">
                     <span className={LEAVE_STATUS_CHIP[r.status]}>{LEAVE_STATUS_LABEL[r.status]}</span>
+                    {r.revision && <span className="small">／{REVISION_LABEL[r.revision.operation]}／版本 {r.revision.number}
+                      {r.revision.currentlyEffective ? '／目前有效' : r.status === 'APPROVED' ? '／歷史核准' : ''}
+                      {r.revision.canceled ? '／業務單已整段銷假' : ''}
+                    </span>}
                   </td>
                   <td data-label="審核人">
                     {r.approver.displayName}
                     {r.status === 'PENDING' && !r.approver.valid && <span className="tag">已無效，需改派</span>}
                   </td>
                   <td data-label="操作">
-                    <button type="button" className="btn btn--small" onClick={() => onOpen(r)}>
+                    <button type="button" className="btn btn--small" disabled={openDisabled} onClick={() => onOpen(r)}>
                       詳情
                     </button>
                   </td>

@@ -39,10 +39,12 @@ public final class LeaveDtos {
     public record WithdrawRequest(@NotNull Long expectedVersion, @Size(max = 2000) String reason) {
     }
 
-    public record ApproveRequest(@NotNull Long expectedVersion) {
+    public record ApproveRequest(@NotNull Long expectedVersion, String evidenceToken) {
+        public ApproveRequest(Long expectedVersion) { this(expectedVersion,null); }
     }
 
-    public record RejectRequest(@NotNull Long expectedVersion, @Size(max = 2000) String reason) {
+    public record RejectRequest(@NotNull Long expectedVersion, @Size(max = 2000) String reason, String evidenceToken) {
+        public RejectRequest(Long expectedVersion,String reason) { this(expectedVersion,reason,null); }
     }
 
     public record ReassignRequest(@NotNull Long approverId, @NotNull Long expectedVersion, @Size(max = 2000) String reason) {
@@ -67,19 +69,39 @@ public final class LeaveDtos {
                                        int minutes, String reason, LeaveStatus status,
                                        PersonRef applicant, ApproverRef approver, ApproverSource approverSource,
                                        PersonRef decidedBy, Instant decidedAt, String decisionReason,
-                                       long version, Instant createdAt, Instant updatedAt) {
+                                       long version, Instant createdAt, Instant updatedAt, RevisionInfo revision) {
     }
 
     public record LeaveHistoryEntry(Long id, HistoryAction action, LeaveStatus fromStatus, LeaveStatus toStatus,
                                     PersonRef beforeApprover, PersonRef afterApprover, String reason, PersonRef actor,
-                                    Instant occurredAt) {
+                                    Instant occurredAt, DecisionContext decision, Long leaveRequestId) {
     }
 
-    public record LeavePage(List<LeaveRequestResponse> items, int page, int size, long total) {
+    public record LeavePage(List<LeaveRequestResponse> items, int page, int size, long total, int effectiveTotalMinutes) {
     }
 
-    public record LeaveDetail(LeaveRequestResponse request, List<LeaveHistoryEntry> history) {
+    public record LeaveDetail(LeaveRequestResponse request, List<LeaveHistoryEntry> history, DocumentResponse document,
+                              com.renewflow.eip.attendance.AttendanceEvidenceService.Snapshot evidence) {
     }
+
+    public record RevisionRequest(@NotNull UUID requestId, @NotNull LeaveEnums.Operation operation,
+                                  @NotNull Long expectedSourceVersion, Long expectedEffectiveRequestId,
+                                  @NotNull Long expectedEffectiveVersion, @NotNull LeaveType leaveType,
+                                  @NotNull LocalDate workDate, @NotNull @JsonFormat(pattern="HH:mm") LocalTime startTime,
+                                  @NotNull @JsonFormat(pattern="HH:mm") LocalTime endTime, @NotNull @Size(max=2000) String reason) {}
+    public record RevisionInfo(Long documentId, int number, LeaveEnums.Operation operation, Long sourceRequestId,
+                               Long sourceVersion, Long baseEffectiveRequestId, long baseEffectiveVersion,
+                               long effectiveVersion, boolean currentlyEffective, boolean canceled,
+                               PersonRef submittedApprover, String submittedApproverSource) {}
+    public record DocumentResponse(Long id, long effectiveVersion, boolean canceled, LeaveRequestResponse origin,
+                                   LeaveRequestResponse originalApproved, LeaveRequestResponse effective,
+                                   LeaveRequestResponse pending, List<LeaveRequestResponse> versions) {}
+    public record RevisionSubmitResult(boolean replayed, UUID requestId, LeaveEnums.Operation operation,
+                                       Long sourceRequestId, long sourceVersion, Long baseEffectiveRequestId,
+                                       long baseEffectiveVersion, LeaveRequestResponse request) {}
+    public record DecisionContext(boolean previewVerified, Long beforeEffectiveRequestId, long beforeEffectiveVersion,
+                                  Long afterEffectiveRequestId, long afterEffectiveVersion,
+                                  com.renewflow.eip.attendance.AttendanceEvidenceService.Snapshot attendance) {}
 
     /** POST 的回應：replayed＝這是相同 requestId＋相同內容的重送，回傳的是原申請（沒有新增）。 */
     public record SubmitResult(boolean replayed, LeaveRequestResponse request) {

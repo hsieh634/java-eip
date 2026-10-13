@@ -24,12 +24,15 @@ class LeaveAuditRollbackIntegrationTest extends LeaveTestBase {
 
     private void breakAuditLog() {
         doThrow(new IllegalStateException("audit write failed (injected)")).when(auditLog)
+                .decision(any(), any(), any(), any(), any(), any(), any());
+        doThrow(new IllegalStateException("audit write failed (injected)")).when(auditLog)
                 .request(any(), any(), any(), any(), any(), any(), any(), any(), any());
         doThrow(new IllegalStateException("audit write failed (injected)")).when(auditLog)
                 .setting(any(), any(), any(), any(), any(), any());
     }
 
     private void repairAuditLog() {
+        doCallRealMethod().when(auditLog).decision(any(), any(), any(), any(), any(), any(), any());
         doCallRealMethod().when(auditLog).request(any(), any(), any(), any(), any(), any(), any(), any(), any());
         doCallRealMethod().when(auditLog).setting(any(), any(), any(), any(), any(), any());
     }

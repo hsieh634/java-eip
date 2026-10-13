@@ -21,11 +21,14 @@ function database(employeeId) {
     'history',(select coalesce(json_agg(h order by h.id),'[]') from attendance_history h where employee_id=${employeeId}),
     'events',(select coalesce(json_agg(e order by e.id),'[]') from attendance_clock_event e where employee_id=${employeeId}))
     where current_database()='renewflow_test';`
-  const result = spawnSync('docker', ['compose', 'exec', '-T', 'db', 'sh', '-c', 'exec psql -U "$POSTGRES_USER" -d "$1" -At', 'sh', 'renewflow_test'],
-    { cwd: path.resolve('..'), input: sql, encoding: 'utf8', windowsHide: true })
+  const testDb = process.env.DB_TEST_NAME ?? 'renewflow_test'
+  if (!/^[a-z][a-z0-9_]*_test$/.test(testDb) || testDb === (process.env.DB_NAME ?? 'renewflow')) throw new Error('測試資料庫不符合隔離規則')
+  const guardedSql = sql.replace("current_database()='renewflow_test'", "current_database()='" + testDb + "'")
+  const result = spawnSync('docker', ['compose', 'exec', '-T', 'db', 'sh', '-c', 'exec psql -U "$POSTGRES_USER" -d "$1" -At', 'sh', testDb],
+    { cwd: path.resolve('..'), input: guardedSql, encoding: 'utf8', windowsHide: true })
   if (result.status !== 0 || !result.stdout.trim()) throw new Error('隔離資料庫唯讀比較失敗（不輸出連線或敏感資料）')
   const state = JSON.parse(result.stdout.trim())
-  if (state.catalog !== 'renewflow_test') throw new Error('實際 catalog 不在本腳本 allowlist')
+  if (state.catalog !== testDb) throw new Error('實際 catalog 不在本腳本 allowlist')
   return state
 }
 const unchanged = (a, b) => ['records', 'events'].every(k => JSON.stringify(a[k]) === JSON.stringify(b[k]))

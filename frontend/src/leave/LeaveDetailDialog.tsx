@@ -3,6 +3,7 @@ import type { LeaveDetail, LeaveHistoryEntry } from '../api/leave'
 import { formatDateTime, formatWorkDate } from '../lib/time'
 import { useLoad } from '../lib/useLoad'
 import { ACTION_LABEL, APPROVER_SOURCE_LABEL, durationText, LEAVE_STATUS_CHIP, LEAVE_STATUS_LABEL, LEAVE_TYPE_LABEL } from './labels'
+import { LeaveAttendanceEvidence, LeaveDocumentSummary } from './LeaveDocumentSummary'
 
 /** 一筆申請的詳情與歷程。actions 由各頁決定（本人：撤回；審核人：核准／退回；管理員：改派）。 */
 export function LeaveDetailDialog({
@@ -37,6 +38,9 @@ export function LeaveDetailDialog({
         {detail.state.kind === 'ready' && (
           <>
             <LeaveSummary detail={detail.state.data} />
+            <LeaveDocumentSummary detail={detail.state.data} />
+            {detail.state.data.evidence && <LeaveAttendanceEvidence evidence={detail.state.data.evidence} />}
+            <button type="button" className="btn btn--small" onClick={detail.reload}>重新整理詳情與出勤依據</button>
             <h3>歷程</h3>
             <LeaveHistoryList entries={detail.state.data.history} />
             {actions?.(detail.state.data, detail.reload)}
@@ -79,6 +83,9 @@ export function LeaveSummary({ detail }: Readonly<{ detail: LeaveDetail }>) {
         {r.approver.displayName}（{APPROVER_SOURCE_LABEL[r.approverSource]}）
         {r.status === 'PENDING' && !r.approver.valid && <span className="tag">目前已無效，需由管理員改派</span>}
       </dd>
+      {r.revision && <><dt>送出時審核人</dt><dd>{r.revision.submittedApprover.displayName}（
+        {r.revision.submittedApproverSource === 'DESIGNATED' ? '指定請假審核人' :
+          r.revision.submittedApproverSource === 'MANAGER' ? '直屬主管' : '歷史來源未記錄'}）</dd></>}
       {r.decidedBy && (
         <>
           <dt>{r.status === 'WITHDRAWN' ? '撤回' : '處理者'}</dt>
@@ -115,7 +122,7 @@ export function LeaveHistoryList({ entries }: Readonly<{ entries: LeaveHistoryEn
       {entries.map((h) => (
         <li key={h.id} className="history-item" data-action={h.action}>
           <div className="request-item__head">
-            <strong>{ACTION_LABEL[h.action]}</strong>
+            <strong>{ACTION_LABEL[h.action]}{h.leaveRequestId != null && '／提交 #' + h.leaveRequestId}</strong>
             <span className="muted small">{formatDateTime(h.occurredAt)}</span>
           </div>
           <p className="small">
@@ -123,6 +130,10 @@ export function LeaveHistoryList({ entries }: Readonly<{ entries: LeaveHistoryEn
           </p>
           {approverChange(h) && <p className="small">{approverChange(h)}</p>}
           {h.reason && <p className="small">原因：{h.reason}</p>}
+          {h.decision && <><p className="small">有效版本 {h.decision.beforeEffectiveVersion} → {h.decision.afterEffectiveVersion}</p>
+            <LeaveAttendanceEvidence evidence={h.decision.attendance} historical /></>}
+          {!h.decision && (h.action === 'APPROVED' || h.action === 'REJECTED') &&
+            <p className="muted small">此歷史審核未保存出勤摘要，不代表當時沒有出勤。</p>}
         </li>
       ))}
     </ul>

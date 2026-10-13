@@ -29,17 +29,24 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
 
     Optional<LeaveRequest> findByIdAndApproverId(Long id, Long approverId);
 
-    /** 同員工、同日期、仍占用時段（待審或已核准），且與 [start, end) 有交集（半開區間：相鄰不算重疊）。 */
-    @Query("""
-            select r from LeaveRequest r
-             where r.employeeId = :employeeId and r.workDate = :workDate
-               and r.status in (com.renewflow.eip.leave.LeaveEnums.LeaveStatus.PENDING,
-                                com.renewflow.eip.leave.LeaveEnums.LeaveStatus.APPROVED)
-               and r.startTime < :endTime and r.endTime > :startTime
-             order by r.startTime
-            """)
-    List<LeaveRequest> findOverlapping(@Param("employeeId") Long employeeId, @Param("workDate") LocalDate workDate,
-                                       @Param("startTime") LocalTime startTime, @Param("endTime") LocalTime endTime);
+    /** 有效內容與待審預留，歷史核准不占用。半開區間允許相鄰。 */
+    @Query(value="""
+        select r.* from leave_request r join leave_document d on d.id=r.document_id
+         where r.employee_id=:employeeId and r.work_date=:workDate
+          and (r.id=d.effective_request_id or (r.status='PENDING' and r.operation<>'CANCEL_ALL'))
+          and r.start_time<:endTime and r.end_time>:startTime order by r.start_time,r.id
+        """,nativeQuery=true)
+    List<LeaveRequest> findOverlapping(@Param("employeeId") Long employeeId,@Param("workDate") LocalDate workDate,
+                                     @Param("startTime") LocalTime startTime,@Param("endTime") LocalTime endTime);
+    @Query(value="""
+        select r.* from leave_request r join leave_document d on d.id=r.document_id
+         where r.employee_id=:employeeId and r.document_id<>:documentId and r.work_date=:workDate
+          and (r.id=d.effective_request_id or (r.status='PENDING' and r.operation<>'CANCEL_ALL'))
+          and r.start_time<:endTime and r.end_time>:startTime order by r.start_time,r.id
+        """,nativeQuery=true)
+    List<LeaveRequest> findOverlappingExcludingDocument(@Param("employeeId") Long employeeId,@Param("documentId") Long documentId,
+        @Param("workDate") LocalDate workDate,@Param("startTime") LocalTime startTime,@Param("endTime") LocalTime endTime);
+    List<LeaveRequest> findByDocumentIdOrderByRevisionNoAsc(Long documentId);
 
     /**
      * 清單查詢。三種範圍共用：anyEmployee／anyApprover／anyDate 為 true 時忽略對應條件

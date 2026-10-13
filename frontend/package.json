@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "e2e": "node e2e/smoke.mjs && node e2e/logout-failure.mjs && node e2e/password-limit.mjs && node e2e/attendance.mjs && node e2e/attendance-corrections.mjs && node e2e/geofence.mjs && node e2e/geofence-races.mjs && node e2e/timesheets.mjs && node e2e/timesheets-review.mjs && node e2e/timesheets-retry-boundaries.mjs && node e2e/organization.mjs && node e2e/leave.mjs && node e2e/leave-review.mjs && node e2e/multiple-attendance.mjs && node e2e/timesheets-success-body.mjs && node e2e/attendance-target-review.mjs",
+    "e2e": "node e2e/smoke.mjs && node e2e/logout-failure.mjs && node e2e/password-limit.mjs && node e2e/attendance.mjs && node e2e/attendance-corrections.mjs && node e2e/geofence.mjs && node e2e/geofence-races.mjs && node e2e/timesheets.mjs && node e2e/timesheets-review.mjs && node e2e/timesheets-retry-boundaries.mjs && node e2e/organization.mjs && node e2e/leave.mjs && node e2e/leave-review.mjs && node e2e/multiple-attendance.mjs && node e2e/timesheets-success-body.mjs && node e2e/attendance-target-review.mjs && node e2e/leave-revisions.mjs",
     "e2e:smoke": "node e2e/smoke.mjs",
     "e2e:logout": "node e2e/logout-failure.mjs",
     "e2e:password": "node e2e/password-limit.mjs",
@@ -24,7 +24,8 @@
     "e2e:leave-review": "node e2e/leave-review.mjs",
     "e2e:multiple-attendance": "node e2e/multiple-attendance.mjs",
     "e2e:timesheets-success-body": "node e2e/timesheets-success-body.mjs",
-    "e2e:attendance-target-review": "node e2e/attendance-target-review.mjs"
+    "e2e:attendance-target-review": "node e2e/attendance-target-review.mjs",
+    "e2e:leave-revisions": "node e2e/leave-revisions.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

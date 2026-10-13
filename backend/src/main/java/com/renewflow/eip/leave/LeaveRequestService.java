@@ -49,9 +49,10 @@ public class LeaveRequestService {
     private final LeaveViews views;
     private final OrganizationLock lock;
     private final Clock clock;
+    private final LeaveRevisionService revisions;
 
     LeaveRequestService(LeaveRequestRepository requestRepository, EmployeeRepository employeeRepository, ApproverResolver approverResolver,
-                        LeaveAuditLog auditLog, LeaveViews views, OrganizationLock lock, Clock clock) {
+                        LeaveAuditLog auditLog, LeaveViews views, OrganizationLock lock, Clock clock, LeaveRevisionService revisions) {
         this.requestRepository = requestRepository;
         this.employeeRepository = employeeRepository;
         this.approverResolver = approverResolver;
@@ -59,6 +60,7 @@ public class LeaveRequestService {
         this.views = views;
         this.lock = lock;
         this.clock = clock;
+        this.revisions=revisions;
     }
 
     // ================================================================ 本人
@@ -91,16 +93,16 @@ public class LeaveRequestService {
      */
     @Transactional
     public SubmitResult submit(EmployeeUserDetails actor, SubmitLeaveRequest body) {
-        Instant now = now();
-        Submission s = LeaveRules.normalize(body.leaveType(), body.workDate(), body.startTime(), body.endTime(), body.reason(),
-                BusinessTime.workDateOf(now));
         Long me = actor.getEmployeeId();
-
         lock.acquireFor(actor);
+        Instant now = now();
+        // 先辨識原提交；確認重送不因一年後日期窗口或新審核設定而失敗。
         LeaveRequest existing = requestRepository.findByEmployeeIdAndRequestId(me, body.requestId()).orElse(null);
+        Submission s = LeaveRules.normalize(body.leaveType(), body.workDate(), body.startTime(), body.endTime(), body.reason(),
+                existing == null ? BusinessTime.workDateOf(now) : body.workDate());
         if (existing != null) {
             // 同一次提交的重送：沿用原申請的狀態與審核人（即使已撤回也不重建），不寫歷程
-            if (!existing.sameContentAs(s)) {
+            if (existing.getOperation()!=com.renewflow.eip.leave.LeaveEnums.Operation.CREATE || !existing.sameContentAs(s)) {
                 throw new ApiException(HttpStatus.CONFLICT, "REQUEST_ID_CONFLICT",
                         "這個提交識別碼已用於另一份內容不同的申請（#" + existing.getId() + "），沒有修改原申請",
                         Map.of("existingRequestId", existing.getId()));
@@ -135,7 +137,7 @@ public class LeaveRequestService {
         String reason = LeaveRules.optionalReason(body.reason());
         lock.acquireFor(actor);
         LeaveRequest r = requestRepository.findByIdAndEmployeeId(id, actor.getEmployeeId()).orElseThrow(LeaveRules::notFound);
-        return decide(actor, r, body.expectedVersion(), LeaveStatus.WITHDRAWN, HistoryAction.WITHDRAWN, reason);
+        return decide(actor, r, body.expectedVersion(), LeaveStatus.WITHDRAWN, HistoryAction.WITHDRAWN, reason, null);
     }
 
     // ================================================================ 審核人
@@ -158,14 +160,14 @@ public class LeaveRequestService {
     @Transactional
     public LeaveDetail approve(EmployeeUserDetails actor, Long id, ApproveRequest body) {
         lock.acquireFor(actor);
-        return decide(actor, findAssignedToMe(actor, id), body.expectedVersion(), LeaveStatus.APPROVED, HistoryAction.APPROVED, null);
+        return decide(actor, findAssignedToMe(actor, id), body.expectedVersion(), LeaveStatus.APPROVED, HistoryAction.APPROVED, null, body.evidenceToken());
     }
 
     @Transactional
     public LeaveDetail reject(EmployeeUserDetails actor, Long id, RejectRequest body) {
         String reason = LeaveRules.requireReason(body.reason(), "退回原因");
         lock.acquireFor(actor);
-        return decide(actor, findAssignedToMe(actor, id), body.expectedVersion(), LeaveStatus.REJECTED, HistoryAction.REJECTED, reason);
+        return decide(actor, findAssignedToMe(actor, id), body.expectedVersion(), LeaveStatus.REJECTED, HistoryAction.REJECTED, reason, body.evidenceToken());
     }
 
     // ================================================================ 內部
@@ -180,18 +182,21 @@ public class LeaveRequestService {
 
     /** 結案：狀態必須仍是待審、版本必須相符；條件 UPDATE 再保證一次。 */
     private LeaveDetail decide(EmployeeUserDetails actor, LeaveRequest r, long expectedVersion, LeaveStatus to, HistoryAction action,
-                               String reason) {
+                               String reason, String evidenceToken) {
         if (r.getStatus() != LeaveStatus.PENDING) {
             throw LeaveRules.notPending(r.getStatus());
         }
         if (r.getVersion() != expectedVersion) {
             throw LeaveRules.changed();
         }
+        revisions.validateBase(r);
+        var prepared=to==LeaveStatus.WITHDRAWN ? null : revisions.prepareDecision(r,evidenceToken,to==LeaveStatus.APPROVED);
         Instant now = now();
         if (requestRepository.decideIfPending(r.getId(), expectedVersion, to.name(), actor.getEmployeeId(), reason, now) == 0) {
             throw LeaveRules.changed();
         }
-        auditLog.request(r.getId(), action, LeaveStatus.PENDING, to, null, null, reason, actor.getEmployeeId(), now);
+        if(prepared==null) auditLog.request(r.getId(), action, LeaveStatus.PENDING, to, null, null, reason, actor.getEmployeeId(), now);
+        else auditLog.decision(r.getId(),action,to,reason,actor.getEmployeeId(),now,revisions.finishDecision(r,prepared,to==LeaveStatus.APPROVED));
         return views.detail(requestRepository.findById(r.getId()).orElseThrow());
     }
 

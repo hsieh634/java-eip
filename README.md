@@ -1,7 +1,7 @@
 # TeamPortal（企業員工入口平台）
 
 Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlow Engineering Method v2**（開發方法名稱）建立。
-**目前進度：T01～T05**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報、最小組織與員工管理、請假申請與主管審核）。T06 尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
+**目前進度：T01～T05.1**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報、最小組織與員工管理、請假申請與主管審核）。T06 尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
 
 > 命名說明：產品顯示名稱是 TeamPortal；Repository（`java-eip`）、資料夾、Java package（`com.renewflow.eip`）、資料庫、容器與環境變數名稱沿用既有設定。
 
@@ -15,6 +15,7 @@ Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlo
 | T04 專案與工時規格 | [docs/renewflow/t04/](docs/renewflow/t04/)（複審：[第 1 輪](docs/renewflow/t04/review-round-1.md)、[第 2 輪](docs/renewflow/t04/review-round-2.md)） |
 | T05 前置：組織與員工規格 | [docs/renewflow/t05-foundation/](docs/renewflow/t05-foundation/) |
 | T05 請假申請與主管審核規格 | [docs/renewflow/t05/](docs/renewflow/t05/) |
+| T05.1 修改／重送／核准後變更與銷假 | [規格](docs/renewflow/t05-1/)、[真人教材](docs/renewflow/t05-1/manual-verification.md)、[學習文件](docs/learning/T05-1-leave-revisions-and-cancellation.md) |
 | 產品方向、路線圖 | [product-direction.md](docs/renewflow/product-direction.md)、[roadmap.md](docs/renewflow/roadmap.md) |
 | STMAX 示範情境（虛構公司與帳號） | [demo-stmax.md](docs/renewflow/demo-stmax.md) |
 | 程式解說、資料流、驗證證據、面試題 | [docs/learning/](docs/learning/)（最新：[T05-leave-and-approval.md](docs/learning/T05-leave-and-approval.md)；T05 前置：[T05-foundation-organization-and-employees.md](docs/learning/T05-foundation-organization-and-employees.md)；T04 第 2 輪：[T04-retry-state-boundaries.md](docs/learning/T04-retry-state-boundaries.md)；T04 主文件：[T04-projects-and-timesheets.md](docs/learning/T04-projects-and-timesheets.md)） |
@@ -207,9 +208,9 @@ curl.exe -s -X POST -b jar.txt -H "X-XSRF-TOKEN: $token" -H "Content-Type: appli
 
 定位打卡（T03.2）依瀏覽器提供的位置判斷，位置可被模擬或偽造，**不能完全防止代打卡**；手機用區網 HTTP 位址開網站時瀏覽器通常不允許定位（需要 HTTPS），本階段沒有 HTTPS 與手機實機驗證。
 
-組織與員工（T05 前置）：部門是平面清單、每人最多一位直屬主管；沒有刪除、沒有修改帳號／員工編號、沒有密碼修改或重設、沒有邀請信；**主管關係不授與任何資料權限**（主管看不到部屬的出勤或工時）。
+組織與員工（T05 前置）：部門是平面清單、每人最多一位直屬主管；沒有刪除、沒有修改帳號／員工編號、沒有密碼修改或重設、沒有邀請信；**主管關係不授與全公司出勤或工時查詢權**。T05.1 僅在合法請假流程詳情提供申請人相關日期的出勤摘要，不擴大 MANAGER 管理查詢權。
 
-請假（T05）是 STMAX 示範規則：只有事假、病假、特休，沒有額度、年資、薪資或法規計算；每筆是一天內的一段時間（半小時為單位，不跨午夜）；「時段長度」未扣除休息時間，不是計薪工時；不會自動修改出勤或工時。**已核准的申請不能修改、撤回或取消**（沒有取消流程，也沒有管理員修改入口）。單一關審核，沒有代理人、通知、附件。
+請假（T05）是 STMAX 示範規則：只有事假、病假、特休，沒有額度、年資、薪資或法規計算；每筆是一天內的一段時間（半小時為單位，不跨午夜）；「時段長度」未扣除休息時間，不是計薪工時；不會自動修改出勤或工時。T05.1 支援待審修改／退回重送，以及已核准假單的變更、整段與單側部分銷假；每次提交保留獨立版本。變更／銷假核准前原有效內容不變，管理員沒有繞過審核直接修改入口。單一關審核，沒有代理人、通知、附件。
 
 沒有登入失敗鎖定、改密碼、多層審核、通知；Session 存在記憶體（重啟後端需重新登入）；正式環境的同源部署與 HTTPS 設定尚未處理（只定義了 Cookie `Secure` 預設為 true）。詳見安全設計文件。
 
@@ -305,7 +306,7 @@ STMAX 是虛構的網站開發與數位行銷公司，帳號與姓名全部虛�
 
 5. （T05 前置）另外設定 `RENEWFLOW_DEMO_STMAX_ORG_ENABLED=true` 並重啟：建立 MANAGEMENT／PROJECT／ADMINISTRATION 三個部門，把六人排進部門並設定主管（Iris 的主管是 Max；Leo、Mia、Ryan 的主管是 Iris；Zoe 的主管是 Max）。只補空白欄位，重啟不會改回你在畫面上的調整。
 
-示範專案（STMAX 官網改版、虛構客戶品牌網站、虛構客戶廣告代操）只寫在文件中，需要時由 `stmax_max` 在「專案管理」手動建立。Iris 是 Leo、Mia、Ryan 的直屬主管，但目前還不能審核任何東西（請假審核屬 T05）。
+示範專案（STMAX 官網改版、虛構客戶品牌網站、虛構客戶廣告代操）只寫在文件中，需要時由 `stmax_max` 在「專案管理」手動建立。Iris 是 Leo、Mia、Ryan 的直屬主管，可審核指派給自己的請假；主管身分不代表全公司審核權。
 
 ## 13. 組織與員工操作步驟（T05 前置）
 
@@ -371,4 +372,16 @@ STMAX 是虛構的網站開發與數位行銷公司，帳號與姓名全部虛�
 
 ## T03.3 本輪驗證與交接
 
-多組出勤與工時成功本文故障回歸：`npm run e2e:multiple-attendance`、`npm run e2e:timesheets-success-body`。驗證範圍、數量與限制見 [verification.md](docs/renewflow/t03-3/verification.md)，接續開發見 [development-handoff.md](docs/renewflow/development-handoff.md)。程式更新後，使用者需自行重啟既有開發後端套用 V8；本輪沒有重啟使用者的 8080 服務。已套用 migration 不修改，資料庫與歷程保留。
+以下為T03.3前批歷史交接；本輪最新本機狀態以T05.1交接為準。多組出勤與工時成功本文故障回歸：`npm run e2e:multiple-attendance`、`npm run e2e:timesheets-success-body`。驗證範圍、數量與限制見 [verification.md](docs/renewflow/t03-3/verification.md)，接續開發見 [development-handoff.md](docs/renewflow/development-handoff.md)。程式更新後，使用者需自行重啟既有開發後端套用 V8；本輪沒有重啟使用者的 8080 服務。已套用 migration 不修改，資料庫與歷程保留。
+
+## T05.1 本輪交付與操作
+
+2026-10-13：T03.3 R1 已收到使用者提供的 ChatGPT 程式複審通過，實際表單邏輯受控檢查基準11／20→修正20／20；BUG-TP-001前輪通過。完整後端／E2E是作者自測，真人驗收尚未完成。T05.1作者證據與本機實際版本見 [verification](docs/renewflow/t05-1/verification.md) 及 [handoff](docs/renewflow/development-handoff.md)。
+
+Leo在「請假」詳情可修改待審／退回重送；目前有效核准版本可申請變更、整段／部分銷假。部分銷假填保留時段，只縮短一側。Iris在「請假審核」查看原核准、目前有效、本次、差異與相關出勤，再確認。列表合計只算本頁目前有效列，歷史核准不重複計算。結果不明保留原本文／UUID，重試拒絕仍鎖定；重新整理不保存草稿，先查真實資料。
+
+本輪唯讀核對Leo→Iris，沒有指定審核人；Max無主管／指定設定，沒有自動替Max設定Iris。密碼取本機`.env`對應變數，勿重設或把秘密放進Git。真人逐步案例仍全部「未執行」，見 [教材](docs/renewflow/t05-1/manual-verification.md)。
+
+新E2E：`npm run e2e:leave-revisions`；隔離埠／庫可由`E2E_API_PORT`、`E2E_VITE_PORT`、`DB_TEST_NAME`指定。JUnit與E2E不能同時操作同一測試庫。新遷移是V9，V1～V8不改；先備份並在新臨時庫還原確認再升級，不對開發庫clean／repair。
+
+可設定與發布的簽核流程、職稱／職位解析、流程版本、拖拉式設計器、條件分支及代理未實作。跨日、多日、取消中間拆兩段也不在本批。

@@ -26,6 +26,10 @@ public class LeaveAuditLog {
                 beforeApproverId, afterApproverId, reason, actorId, now));
     }
 
+    public void decision(Long id, HistoryAction action, LeaveStatus to, String reason, Long actor, Instant now, String snapshot) {
+        historyRepository.save(new LeaveHistory(id,action,LeaveStatus.PENDING,to,reason,actor,now,snapshot));
+    }
+
     /** 指定請假審核人的變更。 */
     public void setting(Long employeeId, Long beforeApproverId, Long afterApproverId, String reason, Long actorId, Instant now) {
         historyRepository.save(new LeaveHistory(null, employeeId, HistoryAction.APPROVER_SETTING_CHANGED, null, null,

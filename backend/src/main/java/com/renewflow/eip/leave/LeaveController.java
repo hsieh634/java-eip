@@ -33,9 +33,10 @@ import java.time.LocalDate;
 public class LeaveController {
 
     private final LeaveRequestService service;
+    private final LeaveRevisionService revisions;
 
-    public LeaveController(LeaveRequestService service) {
-        this.service = service;
+    public LeaveController(LeaveRequestService service,LeaveRevisionService revisions) {
+        this.service = service; this.revisions=revisions;
     }
 
     // ---------------------------------------------------------------- 本人
@@ -61,6 +62,13 @@ public class LeaveController {
                                                @Valid @RequestBody SubmitLeaveRequest body) {
         SubmitResult result = service.submit(actor, body);
         return ResponseEntity.status(result.replayed() ? HttpStatus.OK : HttpStatus.CREATED).body(result);
+    }
+
+    @PostMapping("/api/leave/me/{id}/revisions")
+    public ResponseEntity<LeaveDtos.RevisionSubmitResult> revision(@AuthenticationPrincipal EmployeeUserDetails actor,
+            @PathVariable Long id,@Valid @RequestBody LeaveDtos.RevisionRequest body) {
+        var result=revisions.submit(actor,id,body);
+        return ResponseEntity.status(result.replayed()?HttpStatus.OK:HttpStatus.CREATED).body(result);
     }
 
     @GetMapping("/api/leave/me/{id}")

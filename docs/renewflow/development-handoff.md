@@ -1,5 +1,36 @@
 # TeamPortal 共用開發交接
 
+更新：2026-10-13，Codex；以下最新狀態優先，後面的2026-10-07／前批章節保留歷史。
+
+## 最新接續：T03.3 本機啟用＋T05.1
+
+基準HEAD／origin/main／遠端main均72ba3265037a7cd09c49f3f018b0ee408170f87e，接手時工作區乾淨；前輪R1實作eb5d6840ca5793e06dfc4e2782fdba20bd4757c4不重做。本輪使用者新附件已授權規格、實作、測試、資料庫備份／升級、本機服務啟停與一般commit／push main。沒有force push或部署。
+
+T03.3 R1收到使用者提供的ChatGPT程式複審通過；實際表單邏輯受控20項基準11／20→修正20／20，BUG-TP-001前輪通過。不是ChatGPT重跑完整後端／E2E；前輪作者29項是另一份證據。真人仍未完成。
+
+| 工作 | 本輪實際狀態 | 下一步 |
+|---|---|---|
+| T03.3 R1與BUG | 使用者帶回複審通過；本機已載入 | Max執行M33真人案例 |
+| T05.1規格／實作 | 獨立提交版本、待審修改／退回重送、核准後變更、整段／單側部分銷假、出勤快照完成 | ChatGPT複審 |
+| 作者驗證 | 後端345，build／lint，11支E2E共435，5個變異失敗且還原通過 | 詳見[verification](t05-1/verification.md) |
+| 本機備份／升級 | 三份custom本機備份／新庫還原確認；V8→V9十五張舊表完全相同 | 保留備份，勿clean／repair或改V1～V9 |
+| 網站 | 8080 PID7260、5173 PID516正在執行；三帳號認證與新版GET，業務寫入0 | http://localhost:5173 |
+| 真人驗收 | M33／M51全部未執行 | 由Max依[教材](t05-1/manual-verification.md)親自操作 |
+| 簽核設定／設計器 | 流程發布、職稱解析、流程版本、拖拉、分支、代理未實作 | 另立規格、另行授權 |
+
+目前有效內容唯一來源leave_document.effective_request_id，effective_version在核准才+1；歷史APPROVED保留，不能全相加。待審變更預留新區間並保留原有效占用，銷假不提前釋放；單一pending、來源與有效快照、同員工UUID先確認，鎖／交易／歷程及出勤摘要一起成功或回滾。出勤Service只讀相關日期、不含GPS，不自動核准。詳細API／資料／安全見[t05-1/design](t05-1/design.md)、[api](t05-1/api.md)，學習見[T05.1](../learning/T05-1-leave-revisions-and-cancellation.md)。
+
+最後備份：`C:/Users/10739/.codex/local-backups/java-eip/20261013_final_9521edcd/development-v8.dump`；還原、升級與登入後舊欄位比較皆通過，初始化2業務單、錯誤0。起初實查已V8，沒有重套V8或退版。啟動CLI停用seed／reset／STMAX初始化，.env與帳號密碼／角色／主管／指定設定未改。Leo→Iris，Iris→Max；Max無主管或指定審核人，沒有替Max設定Iris。密碼從.env的RENEWFLOW_DEMO_STMAX_PASSWORD取得，文件不列值。
+
+已正常Ctrl+C停止起初已辨識的本專案8080／5173控制台，新啟動helper49140／48256隱藏執行；只保留開發新版。其他專案8081 PID35604未動。隔離8082／5175已停止，本輪專用測試庫已確認catalog及無連線後清除；三個container /tmp備份檔已清理，三份本機備份及非敏感證據保留。沒有操作共用renewflow_test、其他容器或down -v。
+
+執行證據：backend/target/t05-1-backend-final.log、t05-1-mutations.json／migration-evidence.txt；frontend/e2e/output/t05-1-*.log及mobile PNG。僅提交摘要與合成測試，沒有.env／密碼／Session／CSRF／備份／執行log／截圖／建置產物。沒有新增工具、套件、映像、外部服務或費用。
+
+T05.1 作者自測完成，等待 ChatGPT 複審；真人驗收依實際結果記錄。可設定簽核流程與拖拉設計器尚未實作。停止在本批，不自動開始後續階段。
+
+## 以下為前輪歷史交接
+
+
 更新：2026-10-07，Codex。目錄 `C:\Users\10739\java-eip`，repository `hsieh634/java-eip`，分支 `main`。
 
 ## 最新接續：T03.3 第 1 輪 R1

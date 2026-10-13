@@ -7,6 +7,8 @@ public final class LeaveEnums {
     }
 
     /** STMAX 示範假別（沒有額度；不代表正式人事制度）。 */
+    public enum Operation { CREATE, REVISE, CHANGE, CANCEL_ALL, CANCEL_PART }
+
     public enum LeaveType { PERSONAL, SICK, ANNUAL }
 
     /** PENDING 之外都是終態，不再改變。 */

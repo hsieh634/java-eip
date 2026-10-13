@@ -99,8 +99,8 @@ function DecisionActions({ detail, onReload, onDone }: Readonly<{ detail: LeaveD
     setError(null)
     const life = lifetime.current
     try {
-      if (mode === 'approve') await approveLeave(r.id, r.version)
-      else await rejectLeave(r.id, r.version, reason.trim())
+      if (mode === 'approve') await approveLeave(r.id, r.version, detail.evidence?.token)
+      else await rejectLeave(r.id, r.version, reason.trim(), detail.evidence?.token)
       if (!life.alive) return
       setBusy(false)
       setMode('idle')
@@ -109,7 +109,7 @@ function DecisionActions({ detail, onReload, onDone }: Readonly<{ detail: LeaveD
     } catch (e) {
       if (!life.alive) return
       setBusy(false)
-      const changed = e instanceof ApiError && (e.code === 'LEAVE_CHANGED' || e.code === 'LEAVE_NOT_PENDING' || e.code === 'LEAVE_NOT_FOUND')
+      const changed = e instanceof ApiError && (e.code === 'LEAVE_CHANGED' || e.code === 'LEAVE_NOT_PENDING' || e.code === 'LEAVE_NOT_FOUND' || e.code === 'EFFECTIVE_CHANGED' || e.code === 'ATTENDANCE_EVIDENCE_CHANGED')
       setStale(changed)
       setError(
         e instanceof ApiError && e.code === 'LEAVE_NOT_FOUND'

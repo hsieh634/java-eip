@@ -11,10 +11,13 @@ import {
   type LeaveStatus,
   type LeaveSubmission,
   type LeaveType,
+  type RevisionOperation,
 } from '../api/leave'
 import { useApiErrorMessage } from '../auth/useApiErrorMessage'
 import { LeaveDetailDialog } from '../leave/LeaveDetailDialog'
 import { LeaveList } from '../leave/LeaveList'
+import { LeaveRevisionDialog } from '../leave/LeaveRevisionDialog'
+import { canRevise } from '../leave/revisionOutcome'
 import { checkSubmitResult, isUnconfirmed } from '../leave/submitOutcome'
 import { APPROVER_SOURCE_LABEL, durationText, END_TIMES, LEAVE_TYPE_LABEL, minutesOfDay, START_TIMES } from '../leave/labels'
 import { newRequestId } from '../lib/requestId'
@@ -28,6 +31,14 @@ export function LeavePage() {
   const [formKey, setFormKey] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [open, setOpen] = useState<LeaveRequest | null>(null)
+  const trackingRef = useRef(false)
+  const [tracking, setTracking] = useState(false)
+  const [revision, setRevision] = useState<{ id: number; operation: RevisionOperation } | null>(null)
+  const lockTracking = (value: boolean) => { trackingRef.current = value; setTracking(value) }
+  const startRevision = (id: number, operation: RevisionOperation) => {
+    if (trackingRef.current) return
+    setOpen(null); setRevision({ id, operation })
+  }
   const refreshList = () => setSeq((s) => s + 1)
 
   return (
@@ -35,7 +46,7 @@ export function LeavePage() {
       <h1>請假</h1>
       <p className="muted">
         送出後由審核人核准或退回。假別與規則是 STMAX 示範規則（沒有額度、年資或法規計算）。每筆申請是一天內的一段時間，以半小時為單位；
-        跨日請分開申請。<strong>已核准的申請不能修改或撤回</strong>（本階段沒有取消流程）。
+        跨日請分開申請。<strong>變更／銷假核准前，原核准內容仍有效</strong>；待審可修改，退回可重新送審，舊內容及原因保留。
       </p>
       {notice && (
         <p className="notice notice--success" role="status" data-testid="leave-notice">
@@ -48,16 +59,20 @@ export function LeavePage() {
           <ApproverPreviewBox refreshSeq={seq} />
           <LeaveForm
             key={formKey}
+            blocked={revision !== null}
+            onLock={lockTracking}
             onDone={(message) => {
+              lockTracking(false)
               setNotice(message)
               setFormKey((k) => k + 1) // 新表單、新的 requestId
               refreshList()
             }}
             onListStale={refreshList}
             onStart={() => setNotice(null)}
-            onReset={() => setFormKey((k) => k + 1)}
+            onReset={() => { lockTracking(false); setFormKey((k) => k + 1) }}
           />
         </section>
+        {tracking && <p className="banner banner--warn" data-testid="leave-tracking-lock">有提交仍在處理或未確認，請先確認原提交或警告後明確放棄；不能切換另一份修改表單。</p>}
         <section className="card card--records" aria-labelledby="my-leave-title">
           <div className="card__title-row">
             <h2 id="my-leave-title">我的請假</h2>
@@ -70,35 +85,46 @@ export function LeavePage() {
             load={fetchMyLeaves}
             refreshSeq={seq}
             emptyText="沒有請假申請。"
-            onOpen={setOpen}
+            openDisabled={tracking || revision !== null}
+            onOpen={r => { if (!trackingRef.current && revision === null) setOpen(r) }}
             testId="my-leaves"
           />
         </section>
       </div>
+      {revision && <LeaveRevisionDialog sourceId={revision.id} operation={revision.operation} locked={tracking} onLock={lockTracking}
+        onStale={refreshList} onCancel={() => { if (!trackingRef.current) setRevision(null) }}
+        onDone={message => { lockTracking(false); setRevision(null); setNotice(message); refreshList() }} />}
       {open && (
         <LeaveDetailDialog
           title={`請假詳情 #${open.id}`}
           loadKey={`my-leave:${open.id}:${seq}`}
           loader={() => fetchMyLeave(open.id)}
           onClose={() => setOpen(null)}
-          actions={(detail, reload) =>
-            detail.request.status === 'PENDING' ? (
-              <WithdrawAction
-                detail={detail}
-                onDone={() => {
-                  setNotice(`已撤回請假申請 #${detail.request.id}。`)
-                  refreshList()
-                }}
-                onReload={reload}
-              />
-            ) : (
-              <p className="muted small">這筆申請已結案，不能再撤回或修改。</p>
-            )
-          }
+          actions={(detail, reload) => <>
+            <RevisionActions detail={detail} disabled={tracking} onStart={startRevision}
+              onOpen={r => { if (!trackingRef.current) setOpen(r) }} />
+            {detail.request.status === 'PENDING' && <WithdrawAction detail={detail}
+              onDone={() => { setNotice('已撤回請假申請 #' + detail.request.id + '。'); refreshList() }} onReload={reload} />}
+          </>}
         />
       )}
     </>
   )
+}
+
+function RevisionActions({ detail, disabled, onStart, onOpen }: Readonly<{ detail: LeaveDetail; disabled: boolean;
+  onStart: (id: number, op: RevisionOperation) => void; onOpen: (r: LeaveRequest) => void }>) {
+  const r = detail.request, d = detail.document
+  const pendingOp = r.revision?.operation === 'CREATE' ? 'REVISE' : r.revision?.operation
+  const operations: RevisionOperation[] = r.status === 'APPROVED' ? ['CHANGE', 'CANCEL_PART', 'CANCEL_ALL']
+    : pendingOp ? [pendingOp] : []
+  const names: Record<RevisionOperation,string> = { REVISE: r.status === 'REJECTED' ? '修改後重新送審' : '修改並重新送審', CHANGE: '申請變更', CANCEL_ALL: '申請整段銷假', CANCEL_PART: '申請部分銷假' }
+  return <div className="actions" data-testid="leave-revision-actions">
+    {operations.filter(op => canRevise(detail, op)).map(op => <button key={op} type="button" className="btn" disabled={disabled} onClick={() => onStart(r.id,op)}>{names[op]}</button>)}
+    {d?.pending && d.pending.id !== r.id && <button type="button" className="btn" disabled={disabled} onClick={() => onOpen(d.pending!)}>查看目前待審版本 #{d.pending.id}</button>}
+    {d?.effective && d.effective.id !== r.id && <button type="button" className="btn" disabled={disabled} onClick={() => onOpen(d.effective!)}>查看目前有效版本 #{d.effective.id}</button>}
+    {d?.canceled && <p className="muted small">業務單已完成整段銷假，僅保留歷程；需要新請假請明確從新增入口提出。</p>}
+  </div>
 }
 
 function ApproverPreviewBox({ refreshSeq }: Readonly<{ refreshSeq: number }>) {
@@ -148,9 +174,11 @@ interface LeaveFormProps {
   onStart: () => void
   /** 明確放棄追蹤：外層換 key → 新表單、新的 requestId */
   onReset: () => void
+  onLock: (value: boolean) => void
+  blocked: boolean
 }
 
-function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveFormProps>) {
+function LeaveForm({ onDone, onListStale, onStart, onReset, onLock, blocked }: Readonly<LeaveFormProps>) {
   const messageOf = useApiErrorMessage()
   const lifetime = useLifetime()
   const [requestId] = useState(newRequestId)
@@ -173,6 +201,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
   }
 
   async function send(values: LeaveSubmission, retrying: boolean) {
+    onLock(true)
     submitting.current = true
     setPhase('submitting')
     setError(null)
@@ -210,6 +239,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
         return
       }
       // 第一次送出就被明確拒絕：沒有建立任何東西，保留輸入讓使用者修改
+      onLock(false)
       setPhase('editing')
       setError(messageOf(e))
     }
@@ -217,7 +247,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (submitting.current) return
+    if (submitting.current || blocked) return
     if (pending) {
       await send(pending, true) // 只送未確認快照，不依目前欄位重組
       return
@@ -234,7 +264,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
   else if (phase === 'unknown') submitLabel = '重新送出原內容'
   return (
     <form className="correction-form" onSubmit={submit} noValidate data-testid="leave-form" data-phase={phase} data-unconfirmed={pending !== null || undefined}>
-      <fieldset className="form-fieldset" disabled={locked}>
+      <fieldset className="form-fieldset" disabled={locked || blocked}>
         <div className="form-grid">
           <label htmlFor="lv-type">假別</label>
           <select id="lv-type" value={shown.leaveType} onChange={(e) => edit(() => setLeaveType(e.target.value as LeaveType))}>
@@ -287,7 +317,7 @@ function LeaveForm({ onDone, onListStale, onStart, onReset }: Readonly<LeaveForm
         </div>
       )}
       <div className="actions">
-        <button type="submit" className="btn btn--primary" disabled={phase === 'submitting'}>
+        <button type="submit" className="btn btn--primary" disabled={phase === 'submitting' || blocked}>
           {submitLabel}
         </button>
         {phase === 'unknown' && !confirmAbandon && (

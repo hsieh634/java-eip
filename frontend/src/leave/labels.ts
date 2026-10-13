@@ -64,3 +64,8 @@ export function durationText(minutes: number): string {
 export function describe(r: Pick<LeaveRequest, 'leaveType' | 'workDate' | 'startTime' | 'endTime'>): string {
   return `${LEAVE_TYPE_LABEL[r.leaveType]} ${r.workDate} ${r.startTime}～${r.endTime}`
 }
+
+export const REVISION_LABEL = {
+  CREATE: '新增請假', REVISE: '修改／退回重送', CHANGE: '核准後變更',
+  CANCEL_ALL: '整段銷假', CANCEL_PART: '部分銷假',
+} as const

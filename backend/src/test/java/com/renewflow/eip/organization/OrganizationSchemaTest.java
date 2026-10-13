@@ -31,7 +31,7 @@ class OrganizationSchemaTest extends OrganizationTestBase {
     @DisplayName("OS-01 乾淨資料庫：V6 建立 department、organization_history 與 employee 的組織欄位；不建立任何部門；既有員工未指派、版本 0")
     void cleanDatabaseHasV6() {
         assertThat(jdbc.queryForList("select version from flyway_schema_history where success order by installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
         assertThat(jdbc.queryForObject("select count(*) from department", Integer.class)).as("migration 不建立部門").isZero();
         assertThat(jdbc.queryForObject("select count(*) from employee where department_id is not null or manager_id is not null or version <> 0",
                 Integer.class)).isZero();
