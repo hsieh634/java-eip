@@ -1,5 +1,19 @@
 # T05.1 Tasks
 
+## 第1輪複審修正（2026-10-13；優先狀態）
+
+- [x] 接手ChatGPT34項通過與R1／R2問題，未結案；先規格／設計／驗收矩陣再實作。
+- [x] 同核心舊版R1重現／修正；R2真函式前後及真E2E。
+- [x] 展示預設關閉、本機dev／catalog／碰撞／備份、故障續跑與人工保護。
+- [x] 後端349、五支E2E252、R2受控5、build／lint。
+- [x] V9備份／新庫還原、正常重啟、展示載入／重跑、16表比對與本批測試資源清理。
+- [x] 客戶實際ID／日期指南、學習、作者Review／Archive及交接。
+- [ ] 最後敏感／差異檢查與一般commit／push（以交接SHA為準）。
+- [ ] ChatGPT本輪複審。
+- [ ] Max真人與客戶Demo。
+
+以下保留前批歷史；本輪證據見[verification](review-round-1-verification.md)。
+
 - [x] 基準與實際環境、規格／相關程式盤點。
 - [x] V8 備份及新庫還原、15表比較；專用隔離測試庫。
 - [x] Requirement／Domain／Architecture／Data／API／Security／Proposal／Design。

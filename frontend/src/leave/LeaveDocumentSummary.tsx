@@ -15,15 +15,17 @@ function removed(base: LeaveRequest, next: LeaveRequest): string {
 export function LeaveDocumentSummary({ detail }: Readonly<{ detail: LeaveDetail }>) {
   const d = detail.document, r = detail.request
   if (!d) return null
+  const restricted = d.viewMode === 'REVIEW_HISTORY'
   const base = d.versions.find(v => v.id === r.revision?.baseEffectiveRequestId)
   return <section className="banner banner--info" data-testid="leave-document">
     <h3>業務假單 #{d.id}／本次內容版本 {r.revision?.number}</h3>
+    {restricted && <p className="small" data-testid="leave-view-scope">審核入口的受限歷史檢視：截至所選提交版本 {d.throughRevision}，只提供本次與必要前序。未提供後續內容；以下不是業務單全局目前狀態。</p>}
     <dl className="compare">
       <dt>原提交</dt><dd>#{d.origin.id} {describe(d.origin)}；{d.origin.reason}</dd>
       <dt>原核准內容</dt><dd>{d.originalApproved ? <span>#{d.originalApproved.id} {describe(d.originalApproved)}</span> : '尚未有核准內容'}</dd>
-      <dt>目前有效內容</dt><dd data-testid="leave-effective" data-effective-id={d.effective?.id ?? ''}>
+      <dt>{restricted ? '此歷史檢視的有效內容／審核基礎' : '目前有效內容'}</dt><dd data-testid="leave-effective" data-effective-id={d.effective?.id ?? ''}>
         有效版本 {d.effectiveVersion}：{d.effective ? <span>#{d.effective.id} {describe(d.effective)}（{d.effective.minutes} 分鐘）</span> :
-          d.canceled ? '已完成整段銷假；原核准內容與歷程保留' : '尚無有效請假'}
+          d.canceled ? (restricted ? '此歷史檢視已完成整段銷假；不表示後續狀態' : '已完成整段銷假；原核准內容與歷程保留') : (restricted ? '此歷史檢視尚無核准內容；未提供全局目前狀態' : '尚無有效請假')}
       </dd>
       <dt>本次操作</dt><dd>{r.revision ? REVISION_LABEL[r.revision.operation] : '新增請假'}：{describe(r)}</dd>
       {base && <><dt>移除／銷假範圍</dt><dd data-testid="leave-removed">{removed(base, r)}</dd></>}
@@ -32,7 +34,7 @@ export function LeaveDocumentSummary({ detail }: Readonly<{ detail: LeaveDetail 
     <h4>提交版本（原內容保留）</h4>
     <ul className="history-list" data-testid="leave-versions">
       {d.versions.map(v => <li key={v.id}>#{v.id}／版本 {v.revision?.number} {describe(v)}：{LEAVE_STATUS_LABEL[v.status]}
-        {v.revision?.currentlyEffective ? '（目前有效）' : v.status === 'APPROVED' ? '（歷史核准）' : ''}
+        {v.revision?.currentlyEffective ? (restricted ? '（此歷史檢視有效）' : '（目前有效）') : v.status === 'APPROVED' ? '（歷史核准）' : ''}
         {v.decisionReason && '；' + v.decisionReason}
       </li>)}
     </ul>

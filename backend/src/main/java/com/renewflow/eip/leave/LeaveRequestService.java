@@ -148,13 +148,13 @@ public class LeaveRequestService {
         if (actor.getRole() == Role.EMPLOYEE) {
             throw new AccessDeniedException("approver role required");
         }
-        return views.page(requestRepository.search(true, -1L, false, actor.getEmployeeId(), query.statuses(),
+        return views.approvalPage(requestRepository.search(true, -1L, false, actor.getEmployeeId(), query.statuses(),
                 query.anyDate(), query.from(), query.to(), query.page()));
     }
 
     @Transactional(readOnly = true)
     public LeaveDetail getApproval(EmployeeUserDetails actor, Long id) {
-        return views.detail(findAssignedToMe(actor, id));
+        return views.approvalDetail(findAssignedToMe(actor, id));
     }
 
     @Transactional
@@ -197,7 +197,8 @@ public class LeaveRequestService {
         }
         if(prepared==null) auditLog.request(r.getId(), action, LeaveStatus.PENDING, to, null, null, reason, actor.getEmployeeId(), now);
         else auditLog.decision(r.getId(),action,to,reason,actor.getEmployeeId(),now,revisions.finishDecision(r,prepared,to==LeaveStatus.APPROVED));
-        return views.detail(requestRepository.findById(r.getId()).orElseThrow());
+        var result=requestRepository.findById(r.getId()).orElseThrow();
+        return to==LeaveStatus.WITHDRAWN?views.detail(result):views.approvalDetail(result);
     }
 
     private Instant now() {

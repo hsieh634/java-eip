@@ -1,5 +1,17 @@
 # 版本紀錄
 
+## 2026-10-13：T05.1 第1輪 R1／R2＋STMAX 客戶展示 v1
+
+接手main／遠端基準`47f7fdfec33513bde50396e2864575f4c3f6e054`，初始乾淨；前批實作`1ea6c625894d4645e07e5cafd70ee454d6956eb3`。使用者帶回ChatGPT34項受控前端通過，R1／R2需修正；本輪不是ChatGPT複審通過。
+
+R1將審核入口（含ADMIN）限制為所選提交及必要前序，版本、歷程、決定摘要、有效基礎及出勤一致，介面明示歷史範圍；本人／合法ADMIN管理完整。R2修撤回ID／操作／時段及原有效保留提示，後端撤回交易不變。
+
+新增本機原生CLI預設關閉、dev／catalog／備份及碰撞核對、固定D、逐步持久化續跑與人工保護；六demo_*、三專案、10工時1560分、8MANUAL、10業務單17提交，展示CLOCK／GPS新增0。獨立.env展示密碼不入Git／日誌。無新migration、套件、映像或常駐服務；V1～V9及共用認證不變。
+
+作者R1真核心舊3失敗／4→修正4／4；R2函式0／5→5／5；後端349／349、五支E2E252、build／lint通過。V9備份／還原16表相同，載入原列相同、兩次重跑及唯讀展示後全表相同；本機新版已啟用，測試資源已清除。見[規格](t05-1/review-round-1.md)、[驗證](t05-1/review-round-1-verification.md)、[客戶指南](demo-stmax-customer.md)、[教材](../learning/T05-1-review-scope-and-customer-demo.md)。
+
+狀態：作者自測完成，等待ChatGPT複審；真人與客戶Demo待Max；T05.1未結案，不進下一階段。最終SHA見交接／交付報告。
+
 ## 第 1 輪：T01＋T02
 
 - Repository：`https://github.com/hsieh634/java-eip`，分支 `main`。

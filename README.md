@@ -385,3 +385,11 @@ Leo在「請假」詳情可修改待審／退回重送；目前有效核准版�
 新E2E：`npm run e2e:leave-revisions`；隔離埠／庫可由`E2E_API_PORT`、`E2E_VITE_PORT`、`DB_TEST_NAME`指定。JUnit與E2E不能同時操作同一測試庫。新遷移是V9，V1～V8不改；先備份並在新臨時庫還原確認再升級，不對開發庫clean／repair。
 
 可設定與發布的簽核流程、職稱／職位解析、流程版本、拖拉式設計器、條件分支及代理未實作。跨日、多日、取消中間拆兩段也不在本批。
+
+## T05.1 第1輪 R1／R2＋STMAX 客戶展示（2026-10-13）
+
+本輪修正審核入口巢狀讀取範圍與撤回提示，展示資料已載入本機 http://localhost:5173；作者後端349、五支E2E252、R2受控5及build／lint通過，等待ChatGPT複審，真人與客戶Demo待Max。
+
+客戶操作：[demo-stmax-customer.md](docs/renewflow/demo-stmax-customer.md)，含六個獨立demo_*帳號、D＝2026-10-13、實際假單ID與10～15分鐘流程。用編輯器開本機`.env`讀`TEAMPORTAL_DEMO_PASSWORD`，無預設且與原stmax帳號不同；不要提交或輸出密碼。普通啟動不初始化，明確本機CLI重跑不恢復人工調整。
+
+[第1輪規格](docs/renewflow/t05-1/review-round-1.md)／[作者驗證](docs/renewflow/t05-1/review-round-1-verification.md)／[教材](docs/learning/T05-1-review-scope-and-customer-demo.md)／[最新交接](docs/renewflow/development-handoff.md)。無新migration／套件／服務，備份及16表原資料保留證據見驗證；T05.1未結案。

@@ -1,5 +1,7 @@
 # T05.1 驗證、證據與限制
 
+> 本輪R1／R2及STMAX展示見[review-round-1-verification](review-round-1-verification.md)：349後端、252 E2E、R2受控0／5→5／5與16表保存證據。下方保留前批歷史。T05.1仍待ChatGPT複審，真人與客戶Demo待Max。
+
 日期2026-10-13；基準HEAD／origin/main／遠端main均72ba3265037a7cd09c49f3f018b0ee408170f87e，最初工作區乾淨。前輪R1實作eb5d6840ca5793e06dfc4e2782fdba20bd4757c4不重做。本批執行版本為此基準上的T05.1工作區，最後實作與完整交付SHA見development-handoff／最終Git回報。下列是作者自測，不是ChatGPT或Max執行。
 
 ## 隔離與命令

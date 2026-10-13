@@ -54,6 +54,7 @@ export interface LeaveHistoryEntry {
   leaveRequestId?: number | null
   occurredAt: string
   decision?: DecisionContext | null
+  decisionRestricted?: boolean
 }
 
 export interface LeavePage {
@@ -61,7 +62,7 @@ export interface LeavePage {
   page: number
   size: number
   total: number
-  effectiveTotalMinutes?: number
+  effectiveTotalMinutes?: number | null
 }
 
 export interface LeaveDetail {
@@ -159,11 +160,13 @@ export interface RevisionInfo {
   baseEffectiveRequestId: number | null; baseEffectiveVersion: number
   effectiveVersion: number; currentlyEffective: boolean; canceled: boolean
   submittedApprover: PersonRef; submittedApproverSource: string
+  viewMode?: 'FULL' | 'REVIEW_HISTORY'
 }
 export interface LeaveDocument {
   id: number; effectiveVersion: number; canceled: boolean
   origin: LeaveRequest; originalApproved: LeaveRequest | null; effective: LeaveRequest | null
   pending: LeaveRequest | null; versions: LeaveRequest[]
+  viewMode?: 'FULL' | 'REVIEW_HISTORY'; throughRevision?: number
 }
 export interface AttendanceEvidence {
   dates: string[]; records: AttendanceRecord[]

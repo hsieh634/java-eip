@@ -299,6 +299,8 @@ try {
     await waitText(X.page, '已將申請')
     const lost = await apiCall(B.page, 'GET', `/api/leave/approvals/${ids.ownLeave}`)
     check('V7 改派後原審核人 B 讀不到（404）', lost.status === 404)
+    // notice先更新，詳情稍後重讀；等新審核人真正顯示再操作，避免點到重載中的位置。
+    await X.page.waitForFunction(() => document.querySelector('[data-testid=leave-summary]')?.textContent.includes('E2E 管理員二'))
     await click(X.page, '關閉')
     await X.page.click('a[href="#/leave/approvals"]')
     const mine = await waitRow(X.page, 'approvals', 'E2E 管理員請假', 'PENDING')

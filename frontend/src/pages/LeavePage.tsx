@@ -19,7 +19,7 @@ import { LeaveList } from '../leave/LeaveList'
 import { LeaveRevisionDialog } from '../leave/LeaveRevisionDialog'
 import { canRevise } from '../leave/revisionOutcome'
 import { checkSubmitResult, isUnconfirmed } from '../leave/submitOutcome'
-import { APPROVER_SOURCE_LABEL, durationText, END_TIMES, LEAVE_TYPE_LABEL, minutesOfDay, START_TIMES } from '../leave/labels'
+import { APPROVER_SOURCE_LABEL, describe, REVISION_LABEL, durationText, END_TIMES, LEAVE_TYPE_LABEL, minutesOfDay, START_TIMES } from '../leave/labels'
 import { newRequestId } from '../lib/requestId'
 import { taipeiToday } from '../lib/time'
 import { useLifetime } from '../lib/useLifetime'
@@ -373,7 +373,11 @@ function WithdrawAction({ detail, onDone, onReload }: Readonly<{ detail: LeaveDe
   }
   return (
     <div className="banner banner--warn" data-testid="withdraw-confirm">
-      <p>撤回後這筆申請結案，不能再恢復；需要時請重新送出新的申請。撤回後時段即釋放。</p>
+      <p data-testid="withdraw-target">正在撤回：申請 #{detail.request.id}／{REVISION_LABEL[detail.request.revision?.operation ?? 'CREATE']}／{describe(detail.request)}。</p>
+      <p>本次待審申請將結案，不能再恢復；原提交內容與歷程保留。</p>
+      {detail.document?.effective ? <p data-testid="withdraw-effective">撤回本次{detail.request.revision?.operation?.startsWith('CANCEL') ? '銷假' : '變更'}，原有效請假仍保留：
+        #{detail.document.effective.id}／有效版本 {detail.document.effectiveVersion}／{describe(detail.document.effective)}。不釋放原有效請假時段。</p>
+        : <p data-testid="withdraw-reservation">撤回這次尚未核准的待審預留；本次時段不再占用，沒有原有效假單需要保留。</p>}
       <label htmlFor="withdraw-reason">撤回原因（選填）</label>
       <textarea id="withdraw-reason" rows={2} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
       <p className="form-error" role="alert">

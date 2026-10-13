@@ -1,5 +1,7 @@
 # T05.1 需求、領域、架構、資料、API 與安全設計
 
+> 第1輪修正：下方原設計將「URL提交授權」套用完整同單上下文，會洩漏後續未指派版本。現在Service依入口選FULL／REVIEW_HISTORY，審核只提供所選及必要前序，版本、history／decision_snapshot及出勤使用一致範圍；介面明示歷史基礎不是全局現在狀態。R2只修撤回文字，不改交易；展示用獨立demo_*與預設關閉本機CLI，無migration。實作前需求／設計見[review-round-1](review-round-1.md)，結果見[verification](review-round-1-verification.md)。
+
 2026-10-13，基準 72ba3265037a7cd09c49f3f018b0ee408170f87e；使用者新附件授權本機備份／升級、T05.1、測試、文件及一般 commit／push。T03.3 R1 已通過使用者帶回的 ChatGPT 程式複審及實際表單邏輯 20 項受控檢查（基準11／20→修正20／20）；BUG-TP-001 前輪通過。完整整合／E2E 是作者證據，真人尚未完成。
 
 ## Requirement → Domain Analysis

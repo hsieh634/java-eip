@@ -1,5 +1,7 @@
 # T05.1 驗收案例
 
+第1輪新增R1巢狀讀取、R2五種動作與展示D01～D05，前置／預期／資料副作用見[規格](review-round-1.md)，結果見[驗證](review-round-1-verification.md)。原L51-20範圍限制包含完整JSON與快照／token，不只HTTP及畫面。
+
 執行前置：專用測試員工 Alice→Bob，Admin Carol/Dave、非指派主管 Erin；半小時時段。Clock固定台北2026-10-01，請假日2026-10-05。所有自動寫入限新建隔離庫。每案實際／版本／log於verification更新；不得將計畫標通過。
 
 | ID | 需求／角色與步驟 | 預期HTTP／畫面與資料副作用 |

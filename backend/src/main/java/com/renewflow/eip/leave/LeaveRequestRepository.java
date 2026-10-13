@@ -47,6 +47,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     List<LeaveRequest> findOverlappingExcludingDocument(@Param("employeeId") Long employeeId,@Param("documentId") Long documentId,
         @Param("workDate") LocalDate workDate,@Param("startTime") LocalTime startTime,@Param("endTime") LocalTime endTime);
     List<LeaveRequest> findByDocumentIdOrderByRevisionNoAsc(Long documentId);
+    List<LeaveRequest> findByDocumentIdInOrderByRevisionNoAsc(java.util.Collection<Long> documentIds);
 
     /**
      * 清單查詢。三種範圍共用：anyEmployee／anyApprover／anyDate 為 true 時忽略對應條件

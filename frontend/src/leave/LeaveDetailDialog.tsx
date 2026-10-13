@@ -132,7 +132,8 @@ export function LeaveHistoryList({ entries }: Readonly<{ entries: LeaveHistoryEn
           {h.reason && <p className="small">原因：{h.reason}</p>}
           {h.decision && <><p className="small">有效版本 {h.decision.beforeEffectiveVersion} → {h.decision.afterEffectiveVersion}</p>
             <LeaveAttendanceEvidence evidence={h.decision.attendance} historical /></>}
-          {!h.decision && (h.action === 'APPROVED' || h.action === 'REJECTED') &&
+          {h.decisionRestricted && <p className="muted small">此入口未提供超出授權範圍的審核證據摘要。</p>}
+          {!h.decision && !h.decisionRestricted && (h.action === 'APPROVED' || h.action === 'REJECTED') &&
             <p className="muted small">此歷史審核未保存出勤摘要，不代表當時沒有出勤。</p>}
         </li>
       ))}

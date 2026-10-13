@@ -1,5 +1,13 @@
 # T05.1 API 契約
 
+## 第1輪R1修正後的讀取範圍（優先於下方原始描述）
+
+本人及合法ADMIN管理入口維持FULL；審核列表、詳情及決定回應一律REVIEW_HISTORY，包含ADMIN。新增document.viewMode／throughRevision、revision.viewMode、history.decisionRestricted；清單effectiveTotalMinutes改可空，審核為null（未提供，不代表0）。
+
+REVIEW_HISTORY以所選revision為邊界，versions／origin／originalApproved／pending、revision有效狀態、history與出勤限本次及必要前序。effective／effectiveVersion／canceled是此集合重建的歷史審核基礎，不能當作全局目前狀態。decision前後有效ID或出勤日期／record／event日期超範圍時，整個decision=null且decisionRestricted=true；舊紀錄本來未存則false。原始儲存快照不修改。
+
+未指派後續不能讀；同待審改派後舊審核人GET／處理404。前端不能指定範圍。新合法審核仍有必要前序；完整入口與writer交易不變。見[規格](review-round-1.md)及[驗證](review-round-1-verification.md)。
+
 既有本人／指派審核／ADMIN管理路由不變，所有寫入需要Session、CSRF，過期帳號401。DTO不接受呼叫者指定員工、審核人、狀態、分鐘。新增後續提交：
 
 ```http

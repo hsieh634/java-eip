@@ -1,5 +1,11 @@
 # T05.1 作者 Review／Archive
 
+## 第1輪R1／R2及客戶展示（最新）
+
+使用者帶回34項受控檢查通過，但R1／R2仍需修正，不能自行結案。依[第1輪規格](review-round-1.md)修正審核範圍及撤回文案，新增獨立展示工具；[作者證據](review-round-1-verification.md)記錄前後失敗、全套驗證、故障續跑、備份／資料保留及未真人驗收。客戶見[指南](../demo-stmax-customer.md)，學習含一題不附答案練習見[教材](../../learning/T05-1-review-scope-and-customer-demo.md)。無migration／套件／服務，原交易與共用認證不變。
+
+以下是前批歷史；「提交URL通過即提供整張文件上下文」由本輪設計取代。最新SHA以共用交接及Git為準。
+
 2026-10-13，Codex作者審查，基準72ba3265037a7cd09c49f3f018b0ee408170f87e。本文件不代替ChatGPT複審或Max真人驗收。實作版本與遠端SHA見共用交接。
 
 ## 規格與實作核對

@@ -74,15 +74,17 @@ public final class LeaveDtos {
 
     public record LeaveHistoryEntry(Long id, HistoryAction action, LeaveStatus fromStatus, LeaveStatus toStatus,
                                     PersonRef beforeApprover, PersonRef afterApprover, String reason, PersonRef actor,
-                                    Instant occurredAt, DecisionContext decision, Long leaveRequestId) {
+                                    Instant occurredAt, DecisionContext decision, Long leaveRequestId, boolean decisionRestricted) {
     }
 
-    public record LeavePage(List<LeaveRequestResponse> items, int page, int size, long total, int effectiveTotalMinutes) {
+    public record LeavePage(List<LeaveRequestResponse> items, int page, int size, long total, Integer effectiveTotalMinutes) {
     }
 
     public record LeaveDetail(LeaveRequestResponse request, List<LeaveHistoryEntry> history, DocumentResponse document,
                               com.renewflow.eip.attendance.AttendanceEvidenceService.Snapshot evidence) {
     }
+
+    public enum ViewMode { FULL, REVIEW_HISTORY }
 
     public record RevisionRequest(@NotNull UUID requestId, @NotNull LeaveEnums.Operation operation,
                                   @NotNull Long expectedSourceVersion, Long expectedEffectiveRequestId,
@@ -92,10 +94,10 @@ public final class LeaveDtos {
     public record RevisionInfo(Long documentId, int number, LeaveEnums.Operation operation, Long sourceRequestId,
                                Long sourceVersion, Long baseEffectiveRequestId, long baseEffectiveVersion,
                                long effectiveVersion, boolean currentlyEffective, boolean canceled,
-                               PersonRef submittedApprover, String submittedApproverSource) {}
+                               PersonRef submittedApprover, String submittedApproverSource, ViewMode viewMode) {}
     public record DocumentResponse(Long id, long effectiveVersion, boolean canceled, LeaveRequestResponse origin,
                                    LeaveRequestResponse originalApproved, LeaveRequestResponse effective,
-                                   LeaveRequestResponse pending, List<LeaveRequestResponse> versions) {}
+                                   LeaveRequestResponse pending, List<LeaveRequestResponse> versions, ViewMode viewMode, int throughRevision) {}
     public record RevisionSubmitResult(boolean replayed, UUID requestId, LeaveEnums.Operation operation,
                                        Long sourceRequestId, long sourceVersion, Long baseEffectiveRequestId,
                                        long baseEffectiveVersion, LeaveRequestResponse request) {}

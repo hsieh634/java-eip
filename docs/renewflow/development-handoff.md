@@ -1,5 +1,19 @@
 # TeamPortal 共用開發交接
 
+## 2026-10-13 最新：T05.1 第1輪 R1／R2＋STMAX 客戶 Demo v1
+
+接手基準`47f7fdfec33513bde50396e2864575f4c3f6e054`，初始main／origin／遠端一致、工作區乾淨。使用者帶回ChatGPT34項受控前端通過及R1／R2問題；本輪作者修正完成，**等待ChatGPT複審，真人與客戶Demo待Max；T05.1未結案**。完整交付SHA見最終回報／Git，不自我引用未產生commit。
+
+R1審核入口包含ADMIN只看所選及必要前序，document／revision／history／快照／出勤同範圍，介面明示歷史基礎；本人／ADMIN管理完整。R2撤回列ID、操作、時段、結案及原有效保留，未改交易。無新migration，V1～V9不改；無套件／映像／常駐服務或共用HTTP／認證／useLoad修改。
+
+作者後端349／349、五支E2E252項、R2函式基準0／5→修正5／5、build／lint通過；R1真核心舊4案中3失敗→修正4通過。來源與限制：[規格](t05-1/review-round-1.md)、[verification](t05-1/review-round-1-verification.md)、[學習](../learning/T05-1-review-scope-and-customer-demo.md)。
+
+本機已啟用：http://localhost:5173／後端8080／renewflow V9，seed/reset啟動時停用，另有8081保留。D＝2026-10-13，demo_max／iris／leo／mia／ryan／zoe，共六員工、三專案、10工時1560分、8MANUAL、10業務假單17提交。[客戶指南](demo-stmax-customer.md)有實際ID及10～15分鐘流程。用編輯器讀本機.env的TEAMPORTAL_DEMO_PASSWORD，獨立變數、無預設；其他設定不變，不將值貼到聊天或Git。
+
+載入前V9備份／新庫還原16表相同；載入後原16表舊列相同；兩次重跑各新增0且全部16表相同，六帳號登入／GET後亦相同。備份／證據在`C:/Users/10739/.codex/local-backups/java-eip/t051r1_20261013_673957f8/`；manifest在`C:/Users/10739/.codex/local-state/java-eip/stmax-customer-v1.json`，保留以續跑，不恢復人工資料。核心、新Demo、還原測試庫及容器暫存archive已清除；本機備份與8080／5173保留。
+
+本輪一般commit／push main依附件明確授權，不force push、不部署、不進下一階段。以下歷史狀態矛盾時以上方最新區段為準。
+
 更新：2026-10-13，Codex；以下最新狀態優先，後面的2026-10-07／前批章節保留歷史。
 
 ## 最新接續：T03.3 本機啟用＋T05.1

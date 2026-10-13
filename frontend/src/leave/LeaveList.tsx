@@ -92,7 +92,7 @@ export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, sh
       )}
       {ready && ready.items.length > 0 && (
         <>
-          {ready.effectiveTotalMinutes !== undefined && <p className="muted" data-testid="leave-effective-total">
+          {ready.effectiveTotalMinutes != null && <p className="muted" data-testid="leave-effective-total">
             本頁目前有效時段合計：{formatMinutes(ready.effectiveTotalMinutes)}（歷史核准及待審內容不重複計算）
           </p>}
           <table className="records-table" data-testid={`${testId}-table`}>
@@ -121,8 +121,8 @@ export function LeaveList({ loadKey, load, initialStatus = 'ALL', refreshSeq, sh
                   <td data-label="狀態">
                     <span className={LEAVE_STATUS_CHIP[r.status]}>{LEAVE_STATUS_LABEL[r.status]}</span>
                     {r.revision && <span className="small">／{REVISION_LABEL[r.revision.operation]}／版本 {r.revision.number}
-                      {r.revision.currentlyEffective ? '／目前有效' : r.status === 'APPROVED' ? '／歷史核准' : ''}
-                      {r.revision.canceled ? '／業務單已整段銷假' : ''}
+                      {r.revision.currentlyEffective ? r.revision.viewMode === 'REVIEW_HISTORY' ? '／該歷史檢視有效' : '／目前有效' : r.status === 'APPROVED' ? '／歷史核准' : ''}
+                      {r.revision.canceled ? r.revision.viewMode === 'REVIEW_HISTORY' ? '／該歷史檢視已整段銷假' : '／業務單已整段銷假' : ''}
                     </span>}
                   </td>
                   <td data-label="審核人">
