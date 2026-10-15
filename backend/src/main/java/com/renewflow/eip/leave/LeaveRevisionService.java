@@ -73,13 +73,15 @@ class LeaveRevisionService {
         var effective=doc.effectiveRequestId()==null ? null : requests.findById(doc.effectiveRequestId()).orElseThrow();
         var s=normalize(body,effective,now);
         checkOverlap(source.getEmployeeId(),doc.id(),s,body.operation());
-        var resolution=approvers.resolve(employees.findById(actor.getEmployeeId()).orElseThrow());
+        var applicant=employees.findById(actor.getEmployeeId()).orElseThrow();
+        var resolution=approvers.resolve(applicant);
         if(!resolution.ok()) throw conflict("NO_VALID_APPROVER",resolution.problem());
         if(source.getStatus()==LeaveStatus.PENDING) {
             if(requests.decideIfPending(sourceId,body.expectedSourceVersion(),"WITHDRAWN",actor.getEmployeeId(),"已由新版本取代",now)!=1) throw LeaveRules.changed();
             audit.request(sourceId,HistoryAction.WITHDRAWN,LeaveStatus.PENDING,LeaveStatus.WITHDRAWN,null,null,"已由新版本取代",actor.getEmployeeId(),now);
         }
-        Long id=revisions.insert(source,body,s,all.getLast().getRevisionNo()+1,resolution.approver().getId(),resolution.source().name(),fingerprint,now);
+        Long id=revisions.insert(source,body,s,all.getLast().getRevisionNo()+1,resolution.approver().getId(),resolution.source().name(),fingerprint,now,
+            resolution.workflow()==null?null:resolution.workflow().id(),mapper.writeValueAsString(ApproverResolver.snapshot(applicant,resolution,now)));
         audit.request(id,HistoryAction.SUBMITTED,null,LeaveStatus.PENDING,null,resolution.approver().getId(),null,actor.getEmployeeId(),now);
         return result(false,requests.findById(id).orElseThrow());
     }

@@ -1,5 +1,7 @@
 # T05.1 作者 Review／Archive
 
+2026-10-15最新回覆：使用者於T05.2附件帶回T05.1 R1／R2針對性程式複審完成、未發現新增阻擋。沒有宣稱ChatGPT重跑作者349後端／252 E2E，真人與客戶Demo仍待Max；下方保留前批等待複審的歷史記錄。
+
 ## 第1輪R1／R2及客戶展示（最新）
 
 使用者帶回34項受控檢查通過，但R1／R2仍需修正，不能自行結案。依[第1輪規格](review-round-1.md)修正審核範圍及撤回文案，新增獨立展示工具；[作者證據](review-round-1-verification.md)記錄前後失敗、全套驗證、故障續跑、備份／資料保留及未真人驗收。客戶見[指南](../demo-stmax-customer.md)，學習含一題不附答案練習見[教材](../../learning/T05-1-review-scope-and-customer-demo.md)。無migration／套件／服務，原交易與共用認證不變。

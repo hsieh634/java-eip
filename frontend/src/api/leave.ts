@@ -5,7 +5,7 @@ import type { AttendanceRecord } from './attendance'
 export type LeaveType = 'PERSONAL' | 'SICK' | 'ANNUAL'
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
 export type StatusFilter = 'ALL' | LeaveStatus
-export type ApproverSource = 'DESIGNATED' | 'MANAGER' | 'REASSIGNED'
+export type ApproverSource = 'DESIGNATED' | 'MANAGER' | 'REASSIGNED' | 'WORKFLOW'
 export type HistoryAction = 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN' | 'REASSIGNED' | 'APPROVER_SETTING_CHANGED'
 
 export interface PersonRef {
@@ -40,6 +40,10 @@ export interface LeaveRequest {
   createdAt: string
   updatedAt: string
   revision?: RevisionInfo
+  approvalSnapshot?: {
+    source: string; workflowVersionId: number | null; workflowVersionNumber: number | null; workflowName: string | null
+    stageName: string; rule: string; applicant: PersonRef; approver: PersonRef; capturedAt: string
+  } | null
 }
 
 export interface LeaveHistoryEntry {
@@ -74,7 +78,7 @@ export interface LeaveDetail {
 
 export interface ApproverPreview {
   approver: PersonRef | null
-  source: 'DESIGNATED' | 'MANAGER' | 'NONE'
+  source: 'DESIGNATED' | 'MANAGER' | 'WORKFLOW' | 'NONE'
   problem: string | null
 }
 
@@ -146,7 +150,7 @@ export interface ApproverSetting {
 
 export const fetchApproverSettings = () => api<{ settings: ApproverSetting[] }>('/api/admin/leave/approver-settings').then((r) => r.settings)
 export const fetchApproverSetting = (employeeId: number) => api<ApproverSetting>(`/api/admin/leave/approver-settings/${employeeId}`)
-/** approverId 為 null＝移除指定，改回採用直屬主管。 */
+/** approverId 為 null＝移除個人指定，新提交依已發布流程／無流程的主管預設。 */
 export const updateApproverSetting = (employeeId: number, body: { approverId: number | null; expectedVersion: number; reason: string }) =>
   api<ApproverSetting>(`/api/admin/leave/approver-settings/${employeeId}`, { method: 'PUT', body })
 export const fetchApproverSettingHistory = (employeeId: number) =>

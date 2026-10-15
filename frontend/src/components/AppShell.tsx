@@ -32,6 +32,7 @@ const ADMIN_ITEMS: readonly { view: View; href: string; label: string }[] = [
   { view: 'admin-projects', href: '#/admin/projects', label: '專案管理' },
   { view: 'admin-organization', href: '#/admin/organization', label: '組織與員工' },
   { view: 'admin-leave', href: '#/admin/leave', label: '請假管理' },
+  { view: 'admin-leave-workflow', href: '#/admin/leave/workflow', label: '簽核流程設定' },
 ]
 
 /** 登入後的共用框架：頂欄（品牌、使用者、登出）、側邊選單、登出失敗提示。 */

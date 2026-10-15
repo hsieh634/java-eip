@@ -840,6 +840,25 @@ a.btn {
   gap: 0.35rem;
 }
 
+/* 請假流程設定沿用既有欄位樣式；fieldset負責整組鎖定。 */
+.workflow-form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.workflow-form input,
+.workflow-form textarea {
+  font: inherit;
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* ---------- T05 前置：組織與員工 ---------- */
 .tabs {
   display: flex;

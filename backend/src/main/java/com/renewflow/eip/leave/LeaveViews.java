@@ -124,7 +124,8 @@ class LeaveViews {
                 new LeaveDtos.RevisionInfo(r.getDocumentId(),r.getRevisionNo(),r.getOperation(),r.getSourceRequestId(),r.getSourceVersion(),
                     r.getBaseEffectiveRequestId(),r.getBaseEffectiveVersion(),scoped.get(r.getId()).effectiveVersion(),
                     r.getId().equals(scoped.get(r.getId()).effectiveRequestId()),scoped.get(r.getId()).canceled(),
-                    person(people.get(r.getSubmittedApproverId())),r.getSubmittedApproverSource(),mode))).toList();
+                    person(people.get(r.getSubmittedApproverId())),r.getSubmittedApproverSource(),mode),
+                r.getApprovalSnapshot()==null?null:mapper.readValue(r.getApprovalSnapshot(),LeaveWorkflowDtos.SubmissionSnapshot.class))).toList();
     }
 
     List<LeaveHistoryEntry> history(List<LeaveHistory> rows) {return history(rows,null,java.util.Set.of());}

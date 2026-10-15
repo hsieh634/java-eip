@@ -7,6 +7,7 @@ import { GeofenceSettingsPage } from './pages/GeofenceSettingsPage'
 import { LeaveAdminPage } from './pages/LeaveAdminPage'
 import { LeaveApprovalsPage } from './pages/LeaveApprovalsPage'
 import { LeavePage } from './pages/LeavePage'
+import { LeaveWorkflowPage } from './pages/LeaveWorkflowPage'
 import { OrganizationAdminPage } from './pages/OrganizationAdminPage'
 import { ProjectsAdminPage } from './pages/ProjectsAdminPage'
 import { TimesheetPage } from './pages/TimesheetPage'
@@ -48,6 +49,7 @@ export default function App() {
           {view === 'leave' && <LeavePage />}
           {view === 'leave-approvals' && <LeaveApprovalsPage user={state.user} />}
           {view === 'admin-leave' && <LeaveAdminPage user={state.user} />}
+          {view === 'admin-leave-workflow' && <LeaveWorkflowPage user={state.user} />}
           {view === 'home' && <HomePage user={state.user} />}
         </AppShell>
       )

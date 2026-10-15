@@ -67,7 +67,7 @@ export function guardLocalRuntime({baseUrl,profile,database,environment}) {
  let state;try{state=JSON.parse(r.stdout)}catch{throw new DemoError('LOCAL_RUNTIME_NOT_VERIFIED')}
  if(r.status!==0||!state.project||!state.application||!state.profile) throw new DemoError('LOCAL_RUNTIME_NOT_VERIFIED')
  if(readDatabase(database,'select current_database();')!==database) throw new DemoError('ACTUAL_CATALOG_MISMATCH')
- if(readDatabase(database,"select max(version::int) from flyway_schema_history where success;")!=='9') throw new DemoError('SCHEMA_NOT_V9')
+ if(!['9','10'].includes(readDatabase(database,"select max(version::int) from flyway_schema_history where success;"))) throw new DemoError('SCHEMA_NOT_SUPPORTED')
 }
 export class ApiClient {
  constructor(baseUrl){this.baseUrl=baseUrl;this.cookies=new Map()}

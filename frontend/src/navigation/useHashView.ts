@@ -11,6 +11,7 @@ export type View =
   | 'admin-projects'
   | 'admin-organization'
   | 'admin-leave'
+  | 'admin-leave-workflow'
 
 function subscribe(onChange: () => void) {
   window.addEventListener('hashchange', onChange)
@@ -32,5 +33,6 @@ export function useHashView(): View {
   if (hash === '#/leave') return 'leave'
   if (hash === '#/leave/approvals') return 'leave-approvals'
   if (hash === '#/admin/leave') return 'admin-leave'
+  if (hash === '#/admin/leave/workflow') return 'admin-leave-workflow'
   return 'home'
 }

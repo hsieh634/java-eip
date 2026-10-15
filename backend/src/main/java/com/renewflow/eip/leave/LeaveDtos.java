@@ -50,7 +50,7 @@ public final class LeaveDtos {
     public record ReassignRequest(@NotNull Long approverId, @NotNull Long expectedVersion, @Size(max = 2000) String reason) {
     }
 
-    /** approverId 為 null＝移除指定，改回採用直屬主管。 */
+    /** approverId 為 null＝移除個人指定，新提交依共用流程／無流程的主管預設。 */
     public record UpdateApproverSettingRequest(Long approverId, @NotNull Long expectedVersion, @Size(max = 2000) String reason) {
     }
 
@@ -69,7 +69,8 @@ public final class LeaveDtos {
                                        int minutes, String reason, LeaveStatus status,
                                        PersonRef applicant, ApproverRef approver, ApproverSource approverSource,
                                        PersonRef decidedBy, Instant decidedAt, String decisionReason,
-                                       long version, Instant createdAt, Instant updatedAt, RevisionInfo revision) {
+                                       long version, Instant createdAt, Instant updatedAt, RevisionInfo revision,
+                                       LeaveWorkflowDtos.SubmissionSnapshot approvalSnapshot) {
     }
 
     public record LeaveHistoryEntry(Long id, HistoryAction action, LeaveStatus fromStatus, LeaveStatus toStatus,
@@ -109,7 +110,7 @@ public final class LeaveDtos {
     public record SubmitResult(boolean replayed, LeaveRequestResponse request) {
     }
 
-    /** 預計審核人（只是提示；送出時後端重新判斷）。source：DESIGNATED、MANAGER 或 NONE。 */
+    /** 預計審核人（只是提示；送出時後端重新判斷）。source：DESIGNATED、WORKFLOW、MANAGER 或 NONE。 */
     public record ApproverPreview(PersonRef approver, String source, String problem) {
     }
 

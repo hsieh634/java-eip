@@ -89,6 +89,10 @@ public class LeaveRequest {
     @Column(name="fingerprint") private String fingerprint;
     @Column(name="submitted_approver_id") private Long submittedApproverId;
     @Column(name="submitted_approver_source") private String submittedApproverSource;
+    @Column(name="workflow_version_id") private Long workflowVersionId;
+    @Column(name="approval_snapshot") private String approvalSnapshot;
+    public Long getWorkflowVersionId() { return workflowVersionId; }
+    public String getApprovalSnapshot() { return approvalSnapshot; }
     public Long getDocumentId() { return documentId; }
     public int getRevisionNo() { return revisionNo; }
     public LeaveEnums.Operation getOperation() { return operation; }

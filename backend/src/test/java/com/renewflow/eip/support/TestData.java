@@ -19,9 +19,10 @@ public final class TestData {
      * T05：請假歷程、申請、指定審核人設定一起清空。
      */
     public static void reset(JdbcTemplate jdbc) {
-        jdbc.execute("truncate table attendance_clock_submission, leave_history, leave_request, leave_document, leave_approver_setting, organization_history, timesheet_entry, project, attendance_clock_event, geofence_setting_history,"
+        jdbc.execute("truncate table leave_workflow_history, leave_workflow_state, leave_workflow_version, attendance_clock_submission, leave_history, leave_request, leave_document, leave_approver_setting, organization_history, timesheet_entry, project, attendance_clock_event, geofence_setting_history,"
                 + " geofence_setting, attendance_history, attendance_request, attendance, employee, department");
         jdbc.execute("insert into geofence_setting (id) values (1)");
+        jdbc.execute("insert into leave_workflow_state (id) values (1)");
     }
 
     /**

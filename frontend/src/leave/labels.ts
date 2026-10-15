@@ -26,6 +26,7 @@ export const APPROVER_SOURCE_LABEL: Record<ApproverSource | 'NONE', string> = {
   DESIGNATED: '指定請假審核人',
   MANAGER: '直屬主管',
   REASSIGNED: '管理員改派',
+  WORKFLOW: '已發布請假流程',
   NONE: '沒有合格的審核人',
 }
 

@@ -15,7 +15,7 @@ public final class LeaveEnums {
     public enum LeaveStatus { PENDING, APPROVED, REJECTED, WITHDRAWN }
 
     /** 審核人的來源：送出時是指定設定或直屬主管；ADMIN 改派後為 REASSIGNED。 */
-    public enum ApproverSource { DESIGNATED, MANAGER, REASSIGNED }
+    public enum ApproverSource { DESIGNATED, MANAGER, REASSIGNED, WORKFLOW }
 
     /** 清單篩選。 */
     public enum StatusFilter { ALL, PENDING, APPROVED, REJECTED, WITHDRAWN }

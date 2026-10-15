@@ -85,7 +85,14 @@ export function LeaveSummary({ detail }: Readonly<{ detail: LeaveDetail }>) {
       </dd>
       {r.revision && <><dt>送出時審核人</dt><dd>{r.revision.submittedApprover.displayName}（
         {r.revision.submittedApproverSource === 'DESIGNATED' ? '指定請假審核人' :
-          r.revision.submittedApproverSource === 'MANAGER' ? '直屬主管' : '歷史來源未記錄'}）</dd></>}
+          r.revision.submittedApproverSource === 'MANAGER' ? '直屬主管' :
+            r.revision.submittedApproverSource === 'WORKFLOW' ? '已發布請假流程' : '歷史來源未記錄'}）</dd></>}
+      <dt>提交時流程快照</dt><dd data-testid="leave-approval-snapshot">{r.approvalSnapshot ? <>
+        {r.approvalSnapshot.source === 'PERSONAL' ? '個人指定優先' : r.approvalSnapshot.source === 'WORKFLOW' ? '已發布請假流程' : '原直屬主管預設'}
+        ／{r.approvalSnapshot.workflowVersionNumber !== null ? `流程版本 ${r.approvalSnapshot.workflowVersionNumber}：${r.approvalSnapshot.workflowName}` : '無流程版本'}
+        ／{r.approvalSnapshot.stageName}／{r.approvalSnapshot.rule === 'MANAGER' ? '直屬主管' : '指定審核人'}
+        ／送出時：{r.approvalSnapshot.approver.displayName}（{r.approvalSnapshot.approver.employeeNo}）。原快照保留，目前指派以上方為準。
+      </> : '舊制提交：未保存新流程快照，不推造歷史流程版本。'}</dd>
       {r.decidedBy && (
         <>
           <dt>{r.status === 'WITHDRAWN' ? '撤回' : '處理者'}</dt>
@@ -110,7 +117,7 @@ function approverChange(h: LeaveHistoryEntry): string | null {
   if (h.action === 'SUBMITTED') return h.afterApprover ? `審核人：${h.afterApprover.displayName}` : null
   if (h.action === 'REASSIGNED') return `審核人：${h.beforeApprover?.displayName ?? '（無）'} → ${h.afterApprover?.displayName ?? '（無）'}`
   if (h.action === 'APPROVER_SETTING_CHANGED') {
-    return `指定審核人：${h.beforeApprover?.displayName ?? '（未指定）'} → ${h.afterApprover?.displayName ?? '（未指定，採直屬主管）'}`
+    return `指定審核人：${h.beforeApprover?.displayName ?? '（未指定）'} → ${h.afterApprover?.displayName ?? '（未指定；新提交依共用流程／主管預設）'}`
   }
   return null
 }

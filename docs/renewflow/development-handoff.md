@@ -1,5 +1,19 @@
 # TeamPortal 共用開發交接
 
+## 2026-10-15 最新：T05.2 第一批請假流程設定與版本
+
+基準e6397659df9628362774f2438c2cfa60db293825，main／origin／實際遠端一致、初始乾淨。使用者新附件授權本批實作、驗證、備份／啟停及一般commit／push。T05.1 R1／R2針對性程式複審完成、未發現新增阻擋是本次使用者帶回；不代表重跑349／252、真人或全面驗收。最新SHA以本段後續記錄及Git為準，以下舊章節為歷史。
+
+T05.2完成ADMIN請假一關草稿／發布／不可變版本／操作歷程、正式與草稿預覽、提交快照／舊制顯示、優先順序與未知結果查證。個人指定→已發布流程→無流程主管預設；失效不fallback。沿用OrganizationLock固定順序，發布不改既有待審，原鍵先確認、改派不覆蓋原快照，R1巢狀範圍保留。無共用認證／HTTP／useLoad改動。
+
+V10新增三表及假單兩nullable欄位，不改V1～V9。開發庫V9備份／新庫還原16表相同，V10升級後及唯讀畫面檢查舊欄位相同，版本／歷程0、current=null、不回填舊快照、不重跑開發展示。原D=2026-10-13；所有demo_*／stmax_*、密碼／角色／主管／業務保留。.env未改。初始化工具僅schema相容清單加V10，測試在新庫。
+
+作者完整後端367／367、六支E2E285、build／lint無警告；四個變異均assertion失敗、還原後全套通過。詳細[驗證](t05-2/verification.md)／[規格](t05-2/design.md)／[API](t05-2/api.md)／[完整案例](t05-2/specification.md)／[教材](../learning/T05-2-approval-settings-and-versions.md)。沒有新安裝工具／依賴／映像／服務／費用。
+
+備份與證據：`C:/Users/10739/.codex/local-backups/java-eip/t052_20261015_29842854/`，保留development-v9-before-t052.dump。新建核心／回歸／UI／備份還原庫及容器暫存archive已清除，不動共用庫。起始已辨識8080 PID40840正常Ctrl+C停止；V10驗證後端PID42780已在唯讀驗證後Ctrl+C關閉、8080釋放，讓Max自行在PowerShell啟動。原5173 PID36272保留；8081 PID35604不動；8082／5175已清。啟動方法見[真人操作](t05-2/manual-verification.md)，不可因網站暫無API而再重建DB。
+
+下一步：ChatGPT本批複審；Max真人依[步驟](t05-2/manual-verification.md)用demo_max設定／發布、demo_leo送出、demo_iris審核；密碼從本機.env的TEAMPORTAL_DEMO_PASSWORD讀，無值寫入文件。發布與測試會永久寫歷程，作者沒有替Max執行。多關卡、職稱、條件、代理、通知、設計器及其他模組仍未實作；停在本批。
+
 ## 2026-10-13 最新：T05.1 第1輪 R1／R2＋STMAX 客戶 Demo v1
 
 接手基準`47f7fdfec33513bde50396e2864575f4c3f6e054`，初始main／origin／遠端一致、工作區乾淨。使用者帶回ChatGPT34項受控前端通過及R1／R2問題；本輪作者修正完成，**等待ChatGPT複審，真人與客戶Demo待Max；T05.1未結案**。實作與作者驗證版本`233e6bb7184569d7a69e305c3b48856a045c7257`已一般推送main；其後僅補本交接SHA／完成標記，完整交付HEAD見最終回報／Git。

@@ -50,14 +50,16 @@ public class LeaveRequestService {
     private final OrganizationLock lock;
     private final Clock clock;
     private final LeaveRevisionService revisions;
+    private final tools.jackson.databind.ObjectMapper mapper;
 
     LeaveRequestService(LeaveRequestRepository requestRepository, EmployeeRepository employeeRepository, ApproverResolver approverResolver,
-                        LeaveAuditLog auditLog, LeaveViews views, OrganizationLock lock, Clock clock, LeaveRevisionService revisions) {
+                        LeaveAuditLog auditLog, LeaveViews views, OrganizationLock lock, Clock clock, LeaveRevisionService revisions,tools.jackson.databind.ObjectMapper mapper) {
         this.requestRepository = requestRepository;
         this.employeeRepository = employeeRepository;
         this.approverResolver = approverResolver;
         this.auditLog = auditLog;
         this.views = views;
+        this.mapper=mapper;
         this.lock = lock;
         this.clock = clock;
         this.revisions=revisions;
@@ -110,7 +112,8 @@ public class LeaveRequestService {
             return new SubmitResult(true, views.request(existing));
         }
 
-        Resolution resolution = approverResolver.resolve(employeeRepository.findById(me).orElseThrow());
+        var applicant=employeeRepository.findById(me).orElseThrow();
+        Resolution resolution = approverResolver.resolve(applicant);
         if (!resolution.ok()) {
             throw new ApiException(HttpStatus.CONFLICT, "NO_VALID_APPROVER", resolution.problem());
         }
@@ -124,7 +127,8 @@ public class LeaveRequestService {
         }
         Long approverId = resolution.approver().getId();
         Long id = requestRepository.insertIfNew(me, body.requestId(), s.leaveType().name(), s.workDate(), s.startTime(), s.endTime(),
-                        s.minutes(), s.reason(), approverId, resolution.source().name(), now)
+                        s.minutes(), s.reason(), approverId, resolution.source().name(), now,
+                        resolution.workflow()==null?null:resolution.workflow().id(),mapper.writeValueAsString(ApproverResolver.snapshot(applicant,resolution,now)))
                 // 鎖內不會有同員工、同 requestId 的並行新增；這是唯一限制的最後一道防線
                 .orElseThrow(() -> new IllegalStateException("duplicate requestId inside organization lock"));
         auditLog.request(id, HistoryAction.SUBMITTED, null, LeaveStatus.PENDING, null, approverId, null, me, now);

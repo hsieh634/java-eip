@@ -249,8 +249,8 @@ function SettingsPanel() {
   return (
     <div className="stack">
       <p className="muted">
-        「指定請假審核人」優先於直屬主管，只影響<strong>之後送出</strong>的申請，不會改既有申請，也不會改變組織的主管關係
-        （例如 Max 沒有主管，可指定由 Iris 審核 Max 的請假，Iris 的主管仍是 Max）。移除指定後恢復採用直屬主管。
+        「個人指定請假審核人」優先於已發布的共用流程；尚無發布流程時才採直屬主管。只影響<strong>之後送出</strong>的申請，不會改既有申請，也不改組織主管關係。
+        移除個人指定後依共用流程／主管預設解析；高優先設定失效時不會自動換人。
       </p>
       {notice && (
         <p className="notice notice--success" role="status" data-testid="setting-notice">
@@ -295,7 +295,7 @@ function SettingsPanel() {
         )}
         {settings.state.kind === 'ready' && settings.state.data.length === 0 && (
           <p className="muted" data-testid="settings-empty">
-            目前沒有任何指定設定，所有人都採用直屬主管。
+            目前沒有個人指定設定，新提交依已發布流程解析；尚無流程時採直屬主管。
           </p>
         )}
         {settings.state.kind === 'ready' && settings.state.data.length > 0 && (
@@ -418,7 +418,7 @@ function SettingEditor({ employeeId, managers, onSaved }: Readonly<{ employeeId:
         <dd>{s.manager?.displayName ?? '（無）'}</dd>
         <dt>目前指定</dt>
         <dd data-testid="setting-current">
-          {s.designatedApprover ? `${s.designatedApprover.displayName}（${s.designatedApprover.employeeNo}）${s.designatedApprover.valid ? '' : '（已無效）'}` : '（未指定，採直屬主管）'}
+          {s.designatedApprover ? `${s.designatedApprover.displayName}（${s.designatedApprover.employeeNo}）${s.designatedApprover.valid ? '' : '（已無效）'}` : '（未指定，依共用流程／主管預設）'}
         </dd>
         <dt>目前送出時的審核人</dt>
         <dd>{effectiveText(s)}</dd>
@@ -456,7 +456,7 @@ function SettingForm({
   // 管理員可以直接改選「不指定」或另一位有效審核人（T05 複審 R3）
   const originalMissing = original !== null && !choices.some((m) => m.id === original.id)
   const labelOf = (id: string): string => {
-    if (id === '') return '（未指定，採直屬主管）'
+    if (id === '') return '（未指定，依共用流程／主管預設）'
     if (original && String(original.id) === id) return `${original.displayName}（${original.employeeNo}）${original.valid ? '' : '（已無效）'}`
     const m = choices.find((x) => String(x.id) === id)
     return m ? `${m.displayName}（${m.employeeNo}）` : '（不在可選清單中）'
@@ -488,7 +488,7 @@ function SettingForm({
     <form className="correction-form" onSubmit={save} noValidate data-testid="setting-form">
       <label htmlFor="setting-approver">指定請假審核人</label>
       <select id="setting-approver" value={approverId} onChange={(e) => setApproverId(e.target.value)}>
-        <option value="">不指定（採直屬主管）</option>
+        <option value="">不指定（依共用流程／主管預設）</option>
         {originalMissing && original && (
           <option value={original.id} disabled data-testid="setting-original-invalid">
             目前指定：{original.displayName}（{original.employeeNo}）{original.valid ? '' : '（已無效）'}
@@ -514,7 +514,7 @@ function SettingForm({
         </button>
         {originalMissing && original && !original.valid && (
         <p className="banner banner--warn small" data-testid="setting-invalid-warning">
-          目前指定的 {original.displayName} 已停用或不是主管／管理員，這位員工目前無法送出請假。請改選「不指定（採直屬主管）」或另一位有效審核人；系統不會自動清除。
+          目前指定的 {original.displayName} 已停用或不是主管／管理員，這位員工目前無法送出請假。請改選「不指定（依共用流程／主管預設）」或另一位有效審核人；系統不會自動清除。
         </p>
       )}
       {conflict && (

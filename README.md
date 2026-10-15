@@ -1,7 +1,13 @@
 # TeamPortal（企業員工入口平台）
 
+最新交付：**T05.2 第一批請假單關卡流程設定與版本**。ADMIN可編輯草稿、預覽、填原因發布並查看歷史；個人指定優先，已發布版本及原提交快照不可變，發布不改既有待審。作者自測367後端／285 E2E、build／lint通過，等待ChatGPT複審；真人待Max。T05.1 R1／R2已收到使用者帶回的針對性程式複審完成結果，不等於真人或全面商用品質驗收。
+
+本機已套V10、保留原展示資料，沒有預設發布。依Max先前的服務操作方式，本批驗證後已關閉臨時8080；原5173前端保留，請在自己的PowerShell依下方第3節啟動後端，再開http://localhost:5173，避免重複啟動占埠。
+
+[T05.2規格](docs/renewflow/t05-2/design.md)／[API](docs/renewflow/t05-2/api.md)／[實際驗證](docs/renewflow/t05-2/verification.md)／[真人操作](docs/renewflow/t05-2/manual-verification.md)／[學習教材](docs/learning/T05-2-approval-settings-and-versions.md)。新測試：`cd frontend`後`npm run e2e:leave-workflow`，自建隔離測試庫，需Docker與空閒8082／5175；不操作開發展示資料。
+
 Java 學習專案，依 `RenewFlow-v2-Java-EIP-Learning-Guide.md` 與 **RenewFlow Engineering Method v2**（開發方法名稱）建立。
-**目前進度：T01～T05.1**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報、最小組織與員工管理、請假申請與主管審核）。T06 尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
+**目前進度：T01～T05.2 第一批**（專案基礎、登入／登出、上下班打卡與本人出勤紀錄、出勤更正／重新打卡申請與管理權限、公司範圍定位打卡與管理員設定、最小專案管理與個人工時回報、最小組織與員工管理、請假申請與主管審核）。T06 尚未開始。產品方向與路線圖見下表（候選模組不是實作授權）。
 
 > 命名說明：產品顯示名稱是 TeamPortal；Repository（`java-eip`）、資料夾、Java package（`com.renewflow.eip`）、資料庫、容器與環境變數名稱沿用既有設定。
 

@@ -69,9 +69,9 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     /** 新增：同員工＋同 requestId 已存在時不丟例外、回傳空（唯一限制是最後一道防線）。 */
     @Query(value = """
             insert into leave_request (employee_id, request_id, leave_type, work_date, start_time, end_time, minutes, reason,
-                                       status, approver_id, approver_source, version, created_at, updated_at)
+                                       status, approver_id, approver_source, version, created_at, updated_at,workflow_version_id,approval_snapshot)
             values (:employeeId, :requestId, :leaveType, :workDate, :startTime, :endTime, :minutes, :reason,
-                    'PENDING', :approverId, :approverSource, 0, :now, :now)
+                    'PENDING', :approverId, :approverSource, 0, :now, :now,:workflowVersionId,:approvalSnapshot)
             on conflict (employee_id, request_id) do nothing
             returning id
             """, nativeQuery = true)
@@ -80,7 +80,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
                                @Param("startTime") LocalTime startTime, @Param("endTime") LocalTime endTime,
                                @Param("minutes") int minutes, @Param("reason") String reason,
                                @Param("approverId") Long approverId, @Param("approverSource") String approverSource,
-                               @Param("now") Instant now);
+                               @Param("now") Instant now,@Param("workflowVersionId") Long workflowVersionId,@Param("approvalSnapshot") String approvalSnapshot);
 
     /** 結案（核准、退回、撤回）：只有「版本相符且仍是待審」才會更新。回傳 0＝已被改過或已結案。 */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

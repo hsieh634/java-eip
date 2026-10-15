@@ -1,0 +1,55 @@
+# T05.2 完整修改範圍
+
+比較基準：e6397659df9628362774f2438c2cfa60db293825。全部為本批成果，不含秘密、日誌與產物。
+
+- `README.md`
+- `backend/src/main/java/com/renewflow/eip/leave/ApproverResolver.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveDtos.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveEnums.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveRequest.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveRequestRepository.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveRequestService.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveRevisionRepository.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveRevisionService.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveViews.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveWorkflowController.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveWorkflowDtos.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveWorkflowRepository.java`
+- `backend/src/main/java/com/renewflow/eip/leave/LeaveWorkflowService.java`
+- `backend/src/main/java/com/renewflow/eip/organization/OrganizationLock.java`
+- `backend/src/main/resources/db/migration/V10__leave_workflow_versions.sql`
+- `backend/src/test/java/com/renewflow/eip/attendance/AttendanceSchemaTest.java`
+- `backend/src/test/java/com/renewflow/eip/leave/LeaveSchemaTest.java`
+- `backend/src/test/java/com/renewflow/eip/leave/LeaveWorkflowIntegrationTest.java`
+- `backend/src/test/java/com/renewflow/eip/leave/LeaveWorkflowSchemaTest.java`
+- `backend/src/test/java/com/renewflow/eip/organization/OrganizationSchemaTest.java`
+- `backend/src/test/java/com/renewflow/eip/support/TestData.java`
+- `docs/learning/T05-2-approval-settings-and-versions.md`
+- `docs/renewflow/development-handoff.md`
+- `docs/renewflow/product-direction.md`
+- `docs/renewflow/roadmap.md`
+- `docs/renewflow/t05-1/review-and-archive.md`
+- `docs/renewflow/t05-1/tasks.md`
+- `docs/renewflow/t05-2/api.md`
+- `docs/renewflow/t05-2/changed-files.md`
+- `docs/renewflow/t05-2/design.md`
+- `docs/renewflow/t05-2/manual-verification.md`
+- `docs/renewflow/t05-2/proposal.md`
+- `docs/renewflow/t05-2/review-and-archive.md`
+- `docs/renewflow/t05-2/specification.md`
+- `docs/renewflow/t05-2/tasks.md`
+- `docs/renewflow/t05-2/verification.md`
+- `docs/renewflow/version-log.md`
+- `frontend/e2e/leave-workflow.mjs`
+- `frontend/package.json`
+- `frontend/src/App.tsx`
+- `frontend/src/api/leave.ts`
+- `frontend/src/api/leaveWorkflow.ts`
+- `frontend/src/components/AppShell.tsx`
+- `frontend/src/leave/LeaveDetailDialog.tsx`
+- `frontend/src/leave/labels.ts`
+- `frontend/src/navigation/useHashView.ts`
+- `frontend/src/pages/LeaveAdminPage.tsx`
+- `frontend/src/pages/LeaveWorkflowPage.tsx`
+- `frontend/src/styles.css`
+- `tools/seed-stmax-demo.mjs`
