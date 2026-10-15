@@ -8,7 +8,7 @@
 
 本輪真完整後端367／367、六支E2E285、build／lint無警告；四個針對性變異失敗且還原後全套通過。開發V9備份／還原16表、V10舊欄位保留及唯讀smoke通過，未發布／提交／重建demo。初始化CLI守門只增加已驗證V10相容；沒有新工具安裝、映像、服務或費用。
 
-本批驗證臨時後端已關閉以交還Max自行PowerShell啟動，原5173保留，其他8081不動，測試庫／容器暫存archive清除，本機備份保留。詳見[verification](t05-2/verification.md)、[操作](t05-2/manual-verification.md)、[教材](../learning/T05-2-approval-settings-and-versions.md)。交付SHA見共用交接及Git；作者自測完成、等待ChatGPT複審，真人待Max，不進下一批。
+本批驗證臨時後端已關閉以交還Max自行PowerShell啟動，原5173保留，其他8081不動，測試庫／容器暫存archive清除，本機備份保留。詳見[verification](t05-2/verification.md)、[操作](t05-2/manual-verification.md)、[教材](../learning/T05-2-approval-settings-and-versions.md)。實作SHA b6955c015a54f2153f9f0fb1a14152be1127f0c3已一般推送main，後續只補交接文件；完整交付HEAD以Git／最終回報為準。作者自測完成、等待ChatGPT複審，真人待Max，不進下一批。
 
 ## 2026-10-13：T05.1 第1輪 R1／R2＋STMAX 客戶展示 v1
 
